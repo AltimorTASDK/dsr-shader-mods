@@ -36,7 +36,7 @@ all: $(FLVER_DCX)
 test: STEAM := "$(shell echo $(DSR) | grep -Poh '.*/Steam(?=/steamapps)')/steam.exe"
 test: APPID := 570940
 test: all
-	echo "Launching Dark Souls Remastered"
+	@echo "Launching Dark Souls Remastered"
 	@$(STEAM) -applaunch $(APPID)
 
 $(FLVER_DCX): $(FLVER_OUT) $(TARGETS)
