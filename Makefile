@@ -25,6 +25,13 @@ SOURCES := $(shell find $(SRC_DIR) $(COMMON_DIR) -type f 2> /dev/null)
 .PHONY: all
 all: $(FLVER_DCX)
 
+.PHONY: test
+test: STEAM := "$(shell pwd | grep -Poh '.*/Steam(?=/steamapps)')/steam.exe"
+test: APPID := 570940
+test: all
+	echo "Launching Dark Souls Remastered"
+	@$(STEAM) -applaunch $(APPID)
+
 $(FLVER_DCX): $(FLVER_OUT) $(TARGETS)
 	Yabber $(FLVER_OUT)
 
@@ -49,7 +56,7 @@ $(FLVER_OUT)/FRPG_Phn_%_HemEnvLerp.fpo: $(FLVER_OUT)/FRPG_Phn_%_HemEnv.fpo
 	cp $< $@
 
 $(FLVER_OUT)/FRPG_Phn_%_HemEnvSubsurf.fpo: $(FLVER_OUT)/FRPG_Phn_%_HemEnv.fpo
-	cp $< $@
+	@fxc $(SRC_DIR)/FRPG_FS_PHN.fx //Fo$(subst /,\\,$@) $(FXCFLAGS) //DFS_SUBSURF //EFragmentMain_$*
 
-$(FLVER_OUT)/FRPG_Phn_%_HemEnvLerpSubsurf.fpo: $(FLVER_OUT)/FRPG_Phn_%_HemEnv.fpo
+$(FLVER_OUT)/FRPG_Phn_%_HemEnvLerpSubsurf.fpo: $(FLVER_OUT)/FRPG_Phn_%_HemEnvSubsurf.fpo
 	cp $< $@
