@@ -40,10 +40,10 @@ test: all
 	@$(STEAM) -applaunch $(APPID)
 
 $(FLVER_DCX): $(FLVER_OUT) $(TARGETS)
-	Yabber $(FLVER_OUT)
+	@Yabber $(FLVER_OUT)
 
 $(FLVER_OUT):
-	Yabber $(FLVER_DCX)
+	@Yabber $(FLVER_DCX)
 
 # Sfx
 $(FLVER_OUT)/FRPG_Sfx_%.fpo: $(SOURCES)
