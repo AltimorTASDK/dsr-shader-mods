@@ -1248,7 +1248,7 @@ float InverseDecodeWaterHeight(float4 color)
 float4 _TexDiff(TEX2DSAMPLERDECL(tex), float2 uv)
 {
 #if 1
-	return tex2D(tex, uv) * float4(1, 0, 0, 1);
+	return tex2D(tex, uv);
 #else //ガンマ補正
 	float4 diff = tex2D(tex, uv);
 	diff.rgb = pow(diff.rgb, gFC_ToneMap.w); //gFC_ToneMap.wはテクスチャガンマ
