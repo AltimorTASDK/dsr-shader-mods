@@ -1,0 +1,864 @@
+#line 1 "C:\\J_noAV\\Fantasy_BUILD\\FRPG\\Source\\Shader\\FRPG_Deferred\\FRPG_Deferred_LightProbe.fx"
+
+
+#line 14
+
+
+#line 1 "C:\\J_noAV\\Fantasy_BUILD\\FRPG\\Source\\Shader\\FRPG_Deferred\\FRPG_Deferred_Common.fxh"
+
+
+#line 15
+
+
+
+
+
+#line 1 "C:\\J_noAV\\Fantasy_BUILD\\FRPG\\Source\\Shader\\Common\\dx11.h"
+
+
+
+#line 87
+
+
+#line 90
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+cbuffer AlphaTestBuffer : register ( b1 )
+{
+    int AlphaTest ;
+    float3 AlphaTestRef ;
+    float4 AlphaTest_padding ;
+}
+float4 qlocDoAlphaTest ( const float4 outColor )
+{
+    if ( AlphaTest == 1 )
+    {
+        clip ( outColor . a <= AlphaTestRef . x ? - 1 : 1 ) ;
+    }
+    return outColor ;
+}
+
+cbuffer ClipPlaneBuffer : register ( b2 )
+{
+    int ClipPlaneEnabled ;
+    float4 ClipPlane ;
+}
+float qlocClipPlaneDistance ( float4 pos )
+{
+    if ( ClipPlaneEnabled == 1 )
+    {
+        return dot ( ClipPlane , pos ) ;
+    }
+    else
+    {
+        return 0.0f ;
+    }
+}
+
+#line 187
+
+
+
+
+
+#line 22 "C:\\J_noAV\\Fantasy_BUILD\\FRPG\\Source\\Shader\\FRPG_Deferred\\FRPG_Deferred_Common.fxh"
+
+
+#line 26
+
+
+
+
+
+
+struct VTX_IN_Prim
+{
+    float3 VecPos : POSITION ;
+} ;
+struct VTX_OUT_Prim
+{
+    float4 VecPos : SV_Position ;
+} ;
+
+struct VTX_IN_Filter
+{
+    uint Id : SV_VertexID ;
+} ;
+
+struct VTX_OUT_Filter
+{
+    float4 VecPos : SV_Position ;
+    float2 TexDif : TEXCOORD1 ;
+} ;
+
+struct FRAGMENT_OUT
+{
+    float4 Color : COLOR0 ;
+} ;
+
+
+
+
+
+#line 63
+
+
+
+Texture2D gSMP_0 : register ( t0 ) ; SamplerState gSMP_0Sampler : register ( s0 ) ; ;
+Texture2D gSMP_1 : register ( t1 ) ; SamplerState gSMP_1Sampler : register ( s1 ) ; ;
+Texture2D gSMP_2 : register ( t2 ) ; SamplerState gSMP_2Sampler : register ( s2 ) ; ;
+Texture2D gSMP_3 : register ( t3 ) ; SamplerState gSMP_3Sampler : register ( s3 ) ; ;
+Texture2D gSMP_4 : register ( t4 ) ; SamplerState gSMP_4Sampler : register ( s4 ) ; ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 91
+uniform float4x4 gVC_WorldViewClipMtx : c0 ;
+
+uniform float4x4 gFC_InvViewClipMtx : register ( c0 ) ;
+uniform float4 gFC_CameraPosition : register ( c4 ) ;
+uniform float4 gFC_ScreenSize : register ( c5 ) ;
+uniform float4 gFC_DebugMaterialParams1 : register ( c6 ) ;
+uniform uint4 gFC_LightFalloff : register ( c7 ) ;
+uniform float4 gFC_FogParam : register ( c38 ) ;
+uniform float4 gFC_FogCol : register ( c39 ) ;
+
+float3 Srgb2linear ( float3 c )
+{
+    return pow ( c , float3 ( 2.2 , 2.2 , 2.2 ) ) ;
+}
+
+float3 Linear2srgb ( float3 c )
+{
+    return pow ( c , float3 ( 1 / 2.2 , 1 / 2.2 , 1 / 2.2 ) ) ;
+}
+
+float ReadDepthTexture ( float2 uv )
+{
+    float4 encodedDepth = gSMP_4 . SampleLevel ( gSMP_4Sampler , float4 ( uv , 0 , 0 ) . rg , float4 ( uv , 0 , 0 ) . w ) ;
+
+    return encodedDepth . r ;
+
+#line 119
+
+}
+
+float4 GetWorldPositionFromDepth ( float2 uv )
+{
+    float depth = ReadDepthTexture ( uv ) ;
+
+#line 127
+    float4 pos ;
+    pos . xy = ( 2.0f * float2 ( uv . x , - uv . y ) ) - float2 ( 1.0f , - 1.0f ) ;
+    pos . z = depth ;
+    pos . w = 1.0f ;
+    float4 posC = mul ( pos , gFC_InvViewClipMtx ) ;
+    pos = float4 ( posC . xyz , 1.0f ) / posC . w ;
+
+    return pos ;
+}
+
+float3 UnpackNormal ( float3 params )
+{
+    float3 normal ;
+    normal . xy = params . xy * 2.0f - 1.0f ;
+    normal . z = sqrt ( 1.0f - dot ( normal . xy , normal . xy ) ) * sign ( params . z - 0.5f ) ;
+    if ( abs ( dot ( normal , normal ) ) < 0.0001f )
+    return float3 ( 0.0f , 0.0f , 0.0f ) ;
+    return normalize ( normal ) ;
+}
+
+float2 OctWrap ( float2 v )
+{
+    return ( 1.0 - abs ( v . yx ) ) * ( v . xy >= 0.0 ? 1.0 : - 1.0 ) ;
+}
+
+float3 OctDecode ( float2 encN )
+{
+    encN = encN * 2.0 - 1.0 ;
+
+    float3 n ;
+    n . z = 1.0 - abs ( encN . x ) - abs ( encN . y ) ;
+    n . xy = n . z >= 0.0 ? encN . xy : OctWrap ( encN . xy ) ;
+    n = normalize ( n ) ;
+    return n ;
+}
+
+struct MATERIAL
+{
+    float4 BaseColor ;
+    float3 Normal ;
+    float3 SpecularColor ;
+    float Roughness ;
+
+    float AO ;
+
+    float3 Radiosity ;
+    bool IsSubsurf ;
+    float SubsurfStrength ;
+    float SubsurfOpacity ;
+} ;
+
+float FitRoughness ( float r )
+{
+    r = max ( 0.014f , r ) ;
+    return r ;
+}
+
+float UnpackDiffuseF0 ( float f0 )
+{
+    return f0 / 5.0f ;
+}
+
+float PackDiffuseF0 ( float f0 )
+{
+    return f0 * 5.0f ;
+}
+
+MATERIAL ReadGBuffer ( float2 uv )
+{
+    MATERIAL Out ;
+
+    float4 luv = float4 ( uv , 0 , 0 ) ;
+
+#line 201
+    float4 gBuf1 = gSMP_1 . SampleLevel ( gSMP_1Sampler , luv . rg , luv . w ) ;
+    float4 gBuf2 = gSMP_2 . SampleLevel ( gSMP_2Sampler , luv . rg , luv . w ) ;
+    float4 gBuf3 = gSMP_3 . SampleLevel ( gSMP_3Sampler , luv . rg , luv . w ) ;
+
+    Out . BaseColor = float4 ( Srgb2linear ( gBuf2 . xyz ) , 1.0f ) ;
+    Out . Normal . xyz = OctDecode ( gBuf1 . xy ) ;
+
+#line 210
+    Out . Roughness = gBuf1 . z ;
+
+#line 213
+    Out . SpecularColor = Srgb2linear ( gBuf3 . xyz ) ;
+
+    if ( gBuf1 . w > 0.0f ) {
+        Out . IsSubsurf = true ;
+        Out . AO = 1.0f ;
+        Out . SubsurfStrength = gBuf3 . w * 10.0f ;
+        Out . SubsurfOpacity = gBuf2 . w ;
+    }
+    else {
+        Out . IsSubsurf = false ;
+        Out . AO = gBuf3 . w ;
+        Out . SubsurfStrength = 0.0f ;
+        Out . SubsurfOpacity = 1.0f ;
+    }
+
+    Out . Radiosity = 0 ;
+
+    return Out ;
+}
+
+float calcSpecularF90 ( float3 f0 )
+{
+    return saturate ( 50.0f * dot ( f0 , 0.33 ) ) ;
+}
+
+float linearRoughnessToMipLevel ( float lRoughness , float mipCount )
+{
+
+    float lastMip = mipCount - 1 ;
+    return log2 ( lRoughness ) * 1.2 + lastMip - 2 ;
+}
+
+float3 getSpecularDominantDir_forLightProbe ( float3 N , float3 R , float roughness )
+{
+    float smoothness = saturate ( 1 - roughness ) ;
+    float lerpFactor = smoothness * ( sqrt ( smoothness ) + roughness ) ;
+
+    return lerp ( N , R , lerpFactor ) ;
+}
+
+float3 getDiffuseDominantDir_forLightProbe ( float3 N , float3 V , float NdotV , float roughness )
+{
+    float a = 1.02341f * roughness - 1.51174f ;
+    float b = - 0.511705f * roughness + 0.755868f ;
+    float lerpFactor = saturate ( ( NdotV * a + b ) * roughness ) ;
+
+    return lerp ( N , V , lerpFactor ) ;
+}
+
+float4 CalcGetFogCol ( float4 inCol , float4 fogCol , float fogCoef )
+{
+    float mulFogCoef = fogCol . a * saturate ( fogCoef ) ;
+    return float4 ( lerp ( inCol . rgb , fogCol . rgb , saturate ( mulFogCoef ) ) , inCol . a ) ;
+}
+
+#line 306
+
+
+
+#line 15 "C:\\J_noAV\\Fantasy_BUILD\\FRPG\\Source\\Shader\\FRPG_Deferred\\FRPG_Deferred_LightProbe.fx"
+
+
+#line 1 "C:\\J_noAV\\Fantasy_BUILD\\FRPG\\Source\\Shader\\FRPG_Deferred\\FRPG_Deferred_ShadowFunc.fxh"
+
+
+#line 14
+
+
+
+
+Texture2D gSMP_9 : register ( t9 ) ; SamplerState gSMP_9Sampler : register ( s9 ) ; ;
+
+
+uniform float4 gFC_ShadowMapParam : register ( c8 ) ;
+uniform float4 gFC_ShadowColor : register ( c9 ) ;
+uniform float4 gFC_ShadowStartDist : register ( c10 ) ;
+
+uniform float4x4 gFC_ShadowMapMtxArray [ 4 ] : register ( c11 ) ;
+uniform float4 gFC_ShadowMapClamp [ 4 ] : register ( c27 ) ;
+uniform float4 gFC_ShadowLightDir : register ( c31 ) ;
+
+float DecodeDepthTexture ( const float2 uv )
+{
+    return gSMP_9 . Sample ( gSMP_9Sampler , uv ) . r ;
+
+}
+
+float __GetShadowRate_PCF4 ( const float4 position_in_light )
+{
+    float retval = 0.0f ;
+    const float3 vShadowCoord = position_in_light . xyz / position_in_light . w ;
+    const float4 weight = 1.0f / 4.0f ;
+    {
+        const float4 sampledDepth = float4 (
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( - 0.5 / 2048.0f , - 0.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 0.5 / 2048.0f , - 0.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( - 0.5 / 2048.0f , 0.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 0.5 / 2048.0f , 0.5 / 2048.0f ) )
+        ) ;
+        const float4 attenuation = ( vShadowCoord . zzzz > sampledDepth ) ;
+        retval += dot ( attenuation , weight ) . x ;
+    }
+
+    return retval ;
+}
+
+float __GetShadowRate_PCF9 ( const float4 position_in_light )
+{
+    float retval = 0.0f ;
+    const float3 vShadowCoord = position_in_light . xyz / position_in_light . w ;
+    const float4 weight = 1.0f / 9.0f ;
+    {
+        const float4 sampledDepth = float4 (
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( - 1.0 / 2048.0f , - 1.0 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 0.0 / 2048.0f , - 1.0 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 1.0 / 2048.0f , - 1.0 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( - 1.0 / 2048.0f , 0.0 / 2048.0f ) )
+        ) ;
+        const float4 attenuation = ( vShadowCoord . zzzz > sampledDepth ) ;
+        retval += dot ( attenuation , weight ) . x ;
+    }
+    {
+        const float4 sampledDepth = float4 (
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 0.0 / 2048.0f , 0.0 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 1.0 / 2048.0f , 0.0 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( - 1.0 / 2048.0f , 1.0 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 0.0 / 2048.0f , 1.0 / 2048.0f ) )
+        ) ;
+        const float4 attenuation = ( vShadowCoord . zzzz > sampledDepth ) ;
+        retval += dot ( attenuation , weight ) . x ;
+    }
+    {
+        const float sampledDepth = (
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 1.0 / 2048.0f , 1.0 / 2048.0f ) )
+        ) ;
+        const float attenuation = ( vShadowCoord . z > sampledDepth ) ;
+        retval += attenuation * weight . x ;
+    }
+
+    return retval ;
+}
+
+#line 91
+float __GetShadowRate_PCF16 ( const float4 position_in_light )
+{
+    float retval = 0.0f ;
+    const float3 vShadowCoord = position_in_light . xyz / position_in_light . w ;
+    const float4 weight = 1.0f / 16.0f ;
+    {
+        const float4 sampledDepth = float4 (
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( - 1.5 / 2048.0f , - 1.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( - 0.5 / 2048.0f , - 1.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 0.5 / 2048.0f , - 1.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 1.5 / 2048.0f , - 1.5 / 2048.0f ) )
+        ) ;
+        const float4 attenuation = ( vShadowCoord . zzzz > sampledDepth ) ;
+        retval += dot ( attenuation , weight ) . x ;
+    }
+    {
+        const float4 sampledDepth = float4 (
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( - 1.5 / 2048.0f , - 0.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( - 0.5 / 2048.0f , - 0.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 0.5 / 2048.0f , - 0.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 1.5 / 2048.0f , - 0.5 / 2048.0f ) )
+        ) ;
+        const float4 attenuation = ( vShadowCoord . zzzz > sampledDepth ) ;
+        retval += dot ( attenuation , weight ) . x ;
+    }
+    {
+        const float4 sampledDepth = float4 (
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( - 1.5 / 2048.0f , 0.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( - 0.5 / 2048.0f , 0.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 0.5 / 2048.0f , 0.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 1.5 / 2048.0f , 0.5 / 2048.0f ) )
+        ) ;
+        const float4 attenuation = ( vShadowCoord . zzzz > sampledDepth ) ;
+        retval += dot ( attenuation , weight ) . x ;
+    }
+    {
+        const float4 sampledDepth = float4 (
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( - 1.5 / 2048.0f , 1.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( - 0.5 / 2048.0f , 1.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 0.5 / 2048.0f , 1.5 / 2048.0f ) ) ,
+        DecodeDepthTexture ( vShadowCoord . xy + float2 ( 1.5 / 2048.0f , 1.5 / 2048.0f ) )
+        ) ;
+        const float4 attenuation = ( vShadowCoord . zzzz > sampledDepth ) ;
+        retval += dot ( attenuation , weight ) . x ;
+    }
+
+    return retval ;
+}
+
+#line 152
+
+
+float3 GetShadowRate_PCF4 ( float4 position_in_light , float normalShadow , float4 eyeVec ) { float3 rate = 1 ; { float dist = eyeVec . w ; dist = saturate ( ( gFC_ShadowMapParam . y - dist ) * gFC_ShadowMapParam . z ) ; float fShadow = __GetShadowRate_PCF4 ( position_in_light . xyzw ) + normalShadow ; fShadow = saturate ( fShadow ) ; rate = 1 - ( ( float3 ) dist ) * gFC_ShadowColor . xyz * fShadow ; } return rate ; }
+float3 GetShadowRate_PCF9 ( float4 position_in_light , float normalShadow , float4 eyeVec ) { float3 rate = 1 ; { float dist = eyeVec . w ; dist = saturate ( ( gFC_ShadowMapParam . y - dist ) * gFC_ShadowMapParam . z ) ; float fShadow = __GetShadowRate_PCF9 ( position_in_light . xyzw ) + normalShadow ; fShadow = saturate ( fShadow ) ; rate = 1 - ( ( float3 ) dist ) * gFC_ShadowColor . xyz * fShadow ; } return rate ; }
+float3 GetShadowRate_PCF16 ( float4 position_in_light , float normalShadow , float4 eyeVec ) { float3 rate = 1 ; { float dist = eyeVec . w ; dist = saturate ( ( gFC_ShadowMapParam . y - dist ) * gFC_ShadowMapParam . z ) ; float fShadow = __GetShadowRate_PCF16 ( position_in_light . xyzw ) + normalShadow ; fShadow = saturate ( fShadow ) ; rate = 1 - ( ( float3 ) dist ) * gFC_ShadowColor . xyz * fShadow ; } return rate ; }
+
+float3 CalcGetShadowRate ( float4 position_in_light , float3 normal , float4 eyeVec )
+{
+    float NdotL = dot ( gFC_ShadowLightDir . xyz , normal ) ;
+    float fShadow = ( NdotL + gFC_ShadowMapParam . x ) * gFC_ShadowMapParam . w ;
+    fShadow = 0.0f ;
+    return GetShadowRate_PCF16 ( position_in_light , fShadow , eyeVec ) ;
+}
+
+float3 CalcGetShadowRateWorldSpace ( float4 worldspace_Pos , float3 normal , float4 eyeVec )
+{
+    float4x4 shadowMtx ;
+
+#line 171
+    float viewZ = worldspace_Pos . w ;
+
+    float4 zGreater = ( gFC_ShadowStartDist < viewZ ) ;
+    float4 clamped = 0 ;
+
+    int slice = dot ( zGreater , 1.0f ) - 1 ;
+    shadowMtx = gFC_ShadowMapMtxArray [ slice ] ;
+    clamped = gFC_ShadowMapClamp [ slice ] ;
+
+    float4 worldPos = float4 ( worldspace_Pos . xyz , 1.0f ) ;
+    float4 position_in_light = mul ( worldPos , shadowMtx ) ;
+
+    clamped *= position_in_light . w ;
+
+#line 186
+    position_in_light . xy -= ( position_in_light . xy < clamped . xy ) * position_in_light . w ;
+    position_in_light . xy += ( position_in_light . xy > clamped . zw ) * position_in_light . w ;
+
+    return CalcGetShadowRate ( position_in_light , normal , eyeVec ) ;
+}
+
+float3 CalcGetShadowRateWorldSpaceNoCsd ( float4 worldspace_Pos , float3 normal , float4 eyeVec )
+{
+    float4 worldPos = float4 ( worldspace_Pos . xyz , 1.0f ) ;
+    float4 position_in_light = mul ( worldPos , gFC_ShadowMapMtxArray [ 0 ] ) ;
+    float4 clamp_qloc_renamed = gFC_ShadowMapClamp [ 0 ] * position_in_light . w ;
+
+#line 199
+    position_in_light . xy -= ( position_in_light . xy < clamp_qloc_renamed . xy ) * position_in_light . w ;
+    position_in_light . xy += ( position_in_light . xy > clamp_qloc_renamed . zw ) * position_in_light . w ;
+
+    return CalcGetShadowRate ( position_in_light , normal , eyeVec ) ;
+}
+
+
+
+
+#line 22 "C:\\J_noAV\\Fantasy_BUILD\\FRPG\\Source\\Shader\\FRPG_Deferred\\FRPG_Deferred_LightProbe.fx"
+struct FRAGMENT_F32_OUT
+{
+    float4 Color : SV_Target0 ;
+} ;
+
+Texture2D gSMP_DFG : register ( t6 ) ; SamplerState gSMP_DFGSampler : register ( s6 ) ; ;
+TextureCubeArray gSMP_LightProbeDifArray : register ( t7 ) ; SamplerState gSMP_LightProbeDifArraySampler : register ( s7 ) ; ;
+TextureCubeArray gSMP_LightProbeSpecArray : register ( t8 ) ; SamplerState gSMP_LightProbeSpecArraySampler : register ( s8 ) ; ;
+
+uniform float4 gFC_LightProbeParam : register ( c32 ) ;
+
+
+
+
+uniform float4 gFC_HemAmbCol_u : register ( c33 ) ;
+uniform float4 gFC_HemAmbCol_d : register ( c34 ) ;
+
+#line 43
+float CalcDiffuseFresnel ( float NdotV , float roughness )
+{
+    return 0.04f ;
+    return gSMP_DFG . SampleLevel ( gSMP_DFGSampler , float4 ( roughness , NdotV , 0 , 0 ) . rg , float4 ( roughness , NdotV , 0 , 0 ) . w ) . z ;
+}
+
+float2 CalcSpecularDFG ( float NdotV , float roughness )
+{
+    return gSMP_DFG . SampleLevel ( gSMP_DFGSampler , float4 ( roughness , NdotV , 0 , 0 ) . rg , float4 ( roughness , NdotV , 0 , 0 ) . w ) . xy ;
+}
+
+float3 CalcDiffuseLD ( float3 dominantN )
+{
+    return gFC_LightProbeParam . x * gSMP_LightProbeDifArray . SampleLevel ( gSMP_LightProbeDifArraySampler , float4 ( float4 ( dominantN , 0.0f ) . rgb , gFC_LightProbeParam . z ) , float4 ( dominantN , 0.0f ) . w ) . rgb ;
+}
+
+float3 CalcSpecularLD ( float3 dominantR , float roughness )
+{
+    float mipLevel = linearRoughnessToMipLevel ( roughness , gFC_LightProbeParam . w ) ;
+    return gFC_LightProbeParam . y * gSMP_LightProbeSpecArray . SampleLevel ( gSMP_LightProbeSpecArraySampler , float4 ( float4 ( dominantR , mipLevel ) . rgb , gFC_LightProbeParam . z ) , float4 ( dominantR , mipLevel ) . w ) . rgb ;
+}
+
+float3 CalcHemAmbient ( float3 dominantN )
+{
+    float HemLerpRate = dominantN . y * 0.5f + 0.5f ;
+    return lerp ( gFC_HemAmbCol_d . xyz , gFC_HemAmbCol_u . xyz , HemLerpRate ) ;
+}
+
+float3 evaluateIBLDiffuse ( float3 N , float3 V , float NdotV , float roughness )
+{
+
+#line 76
+    float3 diffuseLighting = CalcDiffuseLD ( N ) ;
+
+#line 81
+    diffuseLighting += CalcHemAmbient ( N ) ;
+
+    return diffuseLighting ;
+
+#line 87
+}
+
+float3 evaluateIBLSpecular ( float3 N , float3 R , float NdotV , float roughness , float3 f0 , float3 f90 )
+{
+    float3 dominantR = getSpecularDominantDir_forLightProbe ( N , R , roughness ) ;
+
+#line 95
+    NdotV = max ( NdotV , 0.5f / 128.0f ) ;
+    float3 preLD = CalcSpecularLD ( dominantR , roughness ) ;
+
+#line 102
+    float2 preDFG = CalcSpecularDFG ( NdotV , roughness ) ;
+
+#line 105
+    return preLD * ( f0 * preDFG . x + f90 * preDFG . y ) ;
+}
+
+#line 112
+float ref_radicalInverse_VdC ( uint bits )
+{
+    bits = ( bits << 16u ) | ( bits >> 16u ) ;
+    bits = ( ( bits & 0x55555555u ) << 1u ) | ( ( bits & 0xAAAAAAAAu ) >> 1u ) ;
+    bits = ( ( bits & 0x33333333u ) << 2u ) | ( ( bits & 0xCCCCCCCCu ) >> 2u ) ;
+    bits = ( ( bits & 0x0F0F0F0Fu ) << 4u ) | ( ( bits & 0xF0F0F0F0u ) >> 4u ) ;
+    bits = ( ( bits & 0x00FF00FFu ) << 8u ) | ( ( bits & 0xFF00FF00u ) >> 8u ) ;
+    return float ( bits ) * 2.3283064365386963e-10 ;
+}
+
+float2 ref_hammersley2D ( int index , int nbSamples )
+{
+    return float2 ( float ( index ) / float ( nbSamples ) , ref_radicalInverse_VdC ( index ) ) ;
+}
+
+void ref_computeSamplingFrame (
+in float3 iFS_Tangent ,
+in float3 iFS_Binormal ,
+in float3 fixedNormalWS ,
+out float3 Tp ,
+out float3 Bp )
+{
+    Tp = normalize ( iFS_Tangent
+    - fixedNormalWS * dot ( iFS_Tangent , fixedNormalWS ) ) ;
+    Bp = normalize ( iFS_Binormal
+    - fixedNormalWS * dot ( iFS_Binormal , fixedNormalWS )
+    - Tp * dot ( iFS_Binormal , Tp ) ) ;
+}
+
+float3 ref_importanceSampleGGX ( float2 Xi , float3 A , float3 B , float3 C , float roughness )
+{
+    float a = roughness * roughness ;
+    float cosT = sqrt ( ( 1.0 - Xi . y ) / ( 1.0 + ( a * a - 1.0 ) * Xi . y ) ) ;
+    float sinT = sqrt ( 1.0 - cosT * cosT ) ;
+    float phi = 2.0 * 3.1415926535897932384626433832795 * Xi . x ;
+    return ( sinT * cos ( phi ) ) * A + ( sinT * sin ( phi ) ) * B + cosT * C ;
+}
+
+float ref_normal_distrib (
+float ndh ,
+float Roughness )
+{
+
+#line 156
+    float alpha = Roughness * Roughness ;
+    float tmp = alpha / max ( 1e-8 , ( ndh * ndh * ( alpha * alpha - 1.0 ) + 1.0 ) ) ;
+    return tmp * tmp * 0.31830988618379067153776752674503 ;
+}
+
+float ref_distortion ( float3 Wn )
+{
+
+#line 165
+    float sinT = sqrt ( 1.0 - Wn . y * Wn . y ) ;
+    return sinT ;
+}
+
+float ref_probabilityGGX ( float ndh , float vdh , float Roughness )
+{
+    return ref_normal_distrib ( ndh , Roughness ) * ndh / ( 4.0 * vdh ) ;
+}
+
+float ref_computeLOD ( float3 Ln , float p , int nbSamples , float maxLod )
+{
+    return max ( 0.0 , ( maxLod - 1.5 ) - 0.5 * ( log ( float ( nbSamples ) ) + log ( p * ref_distortion ( Ln ) ) )
+    * 1.4426950408889634073599246810019 ) ;
+}
+
+float3 ref_fresnel (
+float vdh ,
+float3 F0 )
+{
+
+#line 186
+    float sphg = pow ( 2.0 , ( - 5.55473 * vdh - 6.98316 ) * vdh ) ;
+    return F0 + ( float3 ( 1.0 , 1.0 , 1.0 ) - F0 ) * sphg ;
+}
+
+float ref_G1 (
+float ndw ,
+float k )
+{
+
+#line 196
+    return 1.0 / ( ndw * ( 1.0 - k ) + k ) ;
+}
+
+float ref_visibility (
+float ndl ,
+float ndv ,
+float Roughness )
+{
+
+#line 207
+    float k = Roughness * Roughness * 0.5 ;
+    return ref_G1 ( ndl , k ) * ref_G1 ( ndv , k ) ;
+}
+
+float3 ref_rotate ( float3 v , float a )
+{
+    float angle = a * 2.0 * 3.1415926535897932384626433832795 ;
+    float ca = cos ( angle ) ;
+    float sa = sin ( angle ) ;
+    return float3 ( v . x * ca + v . z * sa , v . y , v . z * ca - v . x * sa ) ;
+}
+
+float3 ref_samplePanoramicLOD ( float3 dir , float lod )
+{
+    return gSMP_LightProbeSpecArray . SampleLevel ( gSMP_LightProbeSpecArraySampler , float4 ( float4 ( dir , lod ) . rgb , gFC_LightProbeParam . z ) , float4 ( dir , lod ) . w ) . rgb ;
+}
+
+#line 225
+float3 ref_microfacets_contrib (
+float vdh ,
+float ndh ,
+float ndl ,
+float ndv ,
+float3 Ks ,
+float Roughness )
+{
+
+#line 235
+    return ref_fresnel ( vdh , Ks ) * ( ref_visibility ( ndl , ndv , Roughness ) * vdh * ndl / ndh ) ;
+}
+
+float3 ref_IBLSpecularContributionQMC (
+float maxLod ,
+int nbSamples ,
+float3 fixedNormalWS ,
+float3 Tp ,
+float3 Bp ,
+float3 pointToCameraDirWS ,
+float3 specColor ,
+float roughness )
+{
+    float3 sum = float3 ( 0.0 , 0.0 , 0.0 ) ;
+
+    float ndv = max ( 1e-8 , abs ( dot ( pointToCameraDirWS , fixedNormalWS ) ) ) ;
+
+    for ( int i = 0 ; i < nbSamples ; ++ i )
+    {
+        float2 Xi = ref_hammersley2D ( i , nbSamples ) ;
+        float3 Hn = ref_importanceSampleGGX ( Xi , Tp , Bp , fixedNormalWS , roughness ) ;
+        float3 Ln = - reflect ( pointToCameraDirWS , Hn ) ;
+
+        float ndl = dot ( fixedNormalWS , Ln ) ;
+
+#line 261
+        const float horizonFade = 1.3 ;
+        float horiz = clamp ( 1.0 + horizonFade * ndl , 0.0 , 1.0 ) ;
+        horiz *= horiz ;
+        ndl = max ( 1e-8 , abs ( ndl ) ) ;
+
+        float vdh = max ( 1e-8 , abs ( dot ( pointToCameraDirWS , Hn ) ) ) ;
+        float ndh = max ( 1e-8 , abs ( dot ( fixedNormalWS , Hn ) ) ) ;
+        float lodS = roughness < 0.01 ? 0.0 :
+        ref_computeLOD (
+        Ln ,
+        ref_probabilityGGX ( ndh , vdh , roughness ) ,
+        nbSamples ,
+        maxLod ) ;
+        sum +=
+        ref_samplePanoramicLOD ( Ln , lodS ) *
+        ref_microfacets_contrib (
+        vdh , ndh , ndl , ndv ,
+        specColor ,
+        roughness ) * horiz ;
+    }
+
+    return sum / nbSamples ;
+}
+
+float3 ref_computeIBL (
+float maxLod ,
+int nbSamples ,
+float3 fixedNormalWS ,
+float3 pointToCameraDirWS ,
+float3 diffColor ,
+float3 specColor ,
+float roughness )
+{
+    float3 Tp , Bp ;
+    float3 UpVector = abs ( fixedNormalWS . z ) < 0.999 ? float3 ( 0 , 0 , 1 ) : float3 ( 1 , 0 , 0 ) ;
+    float3 iFS_Tangent = normalize ( cross ( UpVector , fixedNormalWS ) ) ;
+    float3 iFS_Binormal = cross ( fixedNormalWS , iFS_Tangent ) ;
+    ref_computeSamplingFrame ( iFS_Tangent , iFS_Binormal , fixedNormalWS , Tp , Bp ) ;
+
+    float3 result = ref_IBLSpecularContributionQMC (
+    maxLod ,
+    nbSamples ,
+    fixedNormalWS ,
+    Tp ,
+    Bp ,
+    pointToCameraDirWS ,
+    specColor ,
+    roughness ) ;
+
+    result += diffColor * ( float3 ( 1.0 , 1.0 , 1.0 ) - specColor ) * CalcDiffuseLD ( fixedNormalWS ) ;
+
+    return result ;
+}
+
+#line 318
+FRAGMENT_F32_OUT
+FragmentMain ( VTX_OUT_Filter In )
+{
+    FRAGMENT_F32_OUT Out ;
+
+    MATERIAL Mtl = ReadGBuffer ( In . TexDif . xy ) ;
+
+    float4 objPos = GetWorldPositionFromDepth ( In . TexDif . xy ) ;
+    float3 V = gFC_CameraPosition . xyz - objPos . xyz ;
+    float camDist = length ( V . xyz ) ;
+    V . xyz /= camDist ;
+
+    if ( dot ( Mtl . Normal , Mtl . Normal ) == 0.0f )
+    {
+        float3 preLD = CalcSpecularLD ( - V , 0.0f ) ;
+        Out . Color = float4 ( pow ( preLD . xyz , float3 ( 0.4545 , 0.4545 , 0.4545 ) ) , 1.0f ) ;
+        return Out ;
+    }
+
+    float3 N = Mtl . Normal ;
+    float3 R = 2 * dot ( V , N ) * N - V ;
+
+    float NdotV = saturate ( dot ( N , V ) ) ;
+
+    float3 diffuseColor = Mtl . BaseColor . rgb ;
+    float3 specularColor = Mtl . SpecularColor ;
+    float specularF90 = calcSpecularF90 ( specularColor ) ;
+
+    float3 diffuseIBL = diffuseColor * ( evaluateIBLDiffuse ( N , V , NdotV , Mtl . Roughness ) ) ;
+    float3 specularIBL = evaluateIBLSpecular ( N , R , NdotV , Mtl . Roughness , specularColor , specularF90 ) ;
+
+    {
+        const float3 shadowMapVal = CalcGetShadowRateWorldSpace ( objPos , N , float4 ( V , 0.0f ) ) . rgb ;
+        Mtl . Radiosity . rgb = min ( shadowMapVal . rgb , Mtl . Radiosity . rgb ) ;
+    }
+
+#line 356
+    float3 litColor = ( diffuseIBL + specularIBL ) * Mtl . Radiosity ;
+
+    Out . Color = float4 ( ( litColor ) , 1.0f ) ;
+
+#line 361
+    float fogCoef = ( objPos . w - gFC_FogParam . x ) * gFC_FogParam . y ;
+    Out . Color = CalcGetFogCol ( Out . Color , gFC_FogCol , fogCoef ) ;
+
+#line 366
+    return Out ;
+}
+
+#line 372
+VTX_OUT_Filter
+VertexMain ( VTX_IN_Filter In )
+{
+    VTX_OUT_Filter Out ;
+    float2 pos = 2 * float2 ( In . Id % 2 , 1.0f - In . Id / 2 ) - float2 ( 1.0f , 1.0f ) ;
+    Out . VecPos = float4 ( pos , 0.0f , 1.0f ) ;
+    Out . TexDif . xy = float2 ( In . Id % 2 , In . Id / 2 ) ;
+    return Out ;
+}
