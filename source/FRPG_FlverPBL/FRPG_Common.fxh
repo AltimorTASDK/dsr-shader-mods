@@ -104,6 +104,14 @@
 
 #define EMISSIVE_STRENGTH 10.f //qloc
 
+
+//ShadowMapでの位置をどこで計算するか
+#define CalcLispPos_VS 1
+#define CalcLispPos_PS 2
+
+#define CalcLispPos_PS_Csd 2
+#define CalcLispPos_PS_NoCsd 3
+
 //**バーテックスシェーダ入力
 #ifdef ENABLE_VS
 	#include "FRPG_Common_VTX_IN.fxh"
@@ -163,14 +171,6 @@
 #define POINT_LIGHT_1 POINT_LIGHT_TYPE_None	//!<点光源１
 #define POINT_LIGHT_2 POINT_LIGHT_TYPE_None	//!<点光源２
 #define POINT_LIGHT_3 POINT_LIGHT_TYPE_None	//!<点光源３
-
-
-//ShadowMapでの位置をどこで計算するか
-#define CalcLispPos_VS 1
-#define CalcLispPos_PS 2
-
-#define CalcLispPos_PS_Csd 2
-#define CalcLispPos_PS_NoCsd 3
 
 
 

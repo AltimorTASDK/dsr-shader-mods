@@ -106,11 +106,7 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 #else //WITH_MultiTexture
 	float4 sampledColor = TexDiff(difTexUV);
 	sampledColor.rgb += gFC_FgSkinAddColor.rgb;
-#ifdef WITH_Glow
 	sampledColor *= In.ColVtx;
-#else
-	sampledColor *= In.ColVtx * gFC_ModelMulCol;
-#endif
 	sampledColor = qlocDoAlphaTest(sampledColor);
 #endif //WITH_MultiTexture
 
@@ -146,8 +142,7 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 		#endif
 	}
 
-	float lightmapShadow = 1.0f; // used for shadowing static map point lights
-	float3 lightmapColor = 1.0f;
+	float4 lightmapColor = 1.0f; // used for shadowing static map point lights
 	{//lightmap and shadowmap
 	#ifdef WITH_LightMap
 		#ifdef WITH_MultiTexture
@@ -158,28 +153,26 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 		#ifdef WITH_ShadowMap
 			//light map + shadow map
 			const float4 lightMapVal = TexLightmap(lightmapUV);
-			#if (WITH_ShadowMap == CalcLispPos_VS)
+			#if WITH_ShadowMap == CalcLispPos_VS
 				const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxLit, In.VecNrm.xyz, In.VecEye).rgb;
-			#else //(WITH_ShadowMap == CalcLispPos_PS)
+			#else //WITH_ShadowMap == CalcLispPos_PS
 				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
 			#endif
-			lightmapColor = min(shadowMapVal.rgb, lightMapVal.rgb)*gFC_DebugPointLightParams.y;
-			lightmapShadow = lightMapVal.a*shadowMapVal.r; //QLOC: store shadowing from shadow map too
+			lightmapColor.rgb = min(shadowMapVal.rgb, lightMapVal.rgb)*gFC_DebugPointLightParams.y;
+			lightmapColor.a = lightMapVal.a*shadowMapVal.r; //QLOC: store shadowing from shadow map too
 		#else
 			//light map only
-			const float4 lightMapVal = TexLightmap(lightmapUV);
-			lightmapColor = lightMapVal.rgb*gFC_DebugPointLightParams.y;
-			lightmapShadow = lightMapVal.a;
+			lightmapColor = TexLightmap(lightmapUV) * float4(gFC_DebugPointLightParams.y, gFC_DebugPointLightParams.y, gFC_DebugPointLightParams.y, 1);
 		#endif
 	#else
 		#ifdef WITH_ShadowMap
 			//shadow map only
-			#if (WITH_ShadowMap == CalcLispPos_VS)
+			#if WITH_ShadowMap == CalcLispPos_VS
 				const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxLit, In.VecNrm.xyz, In.VecEye).rgb;
-			#else //(WITH_ShadowMap == CalcLispPos_PS)
+			#else //WITH_ShadowMap == CalcLispPos_PS
 				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
 			#endif
-			lightmapColor = shadowMapVal.rgb;
+			lightmapColor.rgb = shadowMapVal.rgb;
 		#endif
 	#endif
 	}
@@ -212,7 +205,7 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	float3 emissiveComponent = CalcEmissive(Mtl);
 
 	//image-based lighting
-	float3 envLightComponent = CalcEnvIBL(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90) * lightmapColor;
+	float3 envLightComponent = CalcEnvIBL(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90) * lightmapColor.rgb;
 
 	//ambient light
 	envLightComponent += Mtl.DiffuseColor * CalcHemAmbient(Mtl.Normal);
@@ -225,9 +218,9 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	Mtl.LitColor.rgb = emissiveComponent + envLightComponent;
 
 #if(POINT_LIGHT_0 >POINT_LIGHT_TYPE_None)
-	float3 pointLightComponent = CalcPointLightsLegacy(Mtl, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapShadow);
+	float3 pointLightComponent = CalcPointLightsLegacy(Mtl, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapColor.a);
 #else
-	float3 pointLightComponent = CalcPointLightsClustered(Mtl, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapShadow);
+	float3 pointLightComponent = CalcPointLightsClustered(Mtl, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapColor.a);
 #endif
 
 	{//Ghost lights

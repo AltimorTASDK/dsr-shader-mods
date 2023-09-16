@@ -33,7 +33,7 @@ struct VTX_OUT
 {
 	float4 VtxClp : SV_Position;	//!<頂点座標(クリップ空間)
 	float4 VtxWld : TEXCOORD0;	//!<頂点座標(ワールド空間)(xyz:ワールド空間での位置, w:View空間でのZ)
-	#ifdef WITH_ShadowMap
+	#if WITH_ShadowMap == CalcLispPos_VS
 		float4 VtxLit : TEXCOORD1;	//!<頂点座標(ライト空間)
 	#endif
 
