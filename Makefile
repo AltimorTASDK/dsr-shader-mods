@@ -7,8 +7,8 @@ DSR := $(subst $(strip) ,\ ,$(DSR))
 
 SRC_DIR := source/FRPG_FlverPBL
 COMMON_DIR := source/Common
-FLVER_OUT := $(DSR)/FRPG_FlverPBL_fpo_DX11-shaderbnd-dcx
-FLVER_DCX := $(DSR)/FRPG_FlverPBL_fpo_DX11.shaderbnd.dcx
+FLVER_OUT := $(DSR)/shader/FRPG_FlverPBL_fpo_DX11-shaderbnd-dcx
+FLVER_DCX := $(DSR)/shader/FRPG_FlverPBL_fpo_DX11.shaderbnd.dcx
 
 VARIANTS := $(shell grep -Poh '(?<=FragmentMain_)[^()]+' '$(SRC_DIR)/FRPG_FS_HemEnv_Base.fxh')
 
