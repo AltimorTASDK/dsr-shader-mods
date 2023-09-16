@@ -32,19 +32,19 @@
 
 #ifdef _PS3
 	//	Percentage Closer Filtering
-	//	nVidiaのGPUはPercentage Closer Filteringは無償で行えます	
+	//	nVidiaのGPUはPercentage Closer Filteringは無償で行えます
 	HALF __GetShadowRate_PCF4( float4 position_in_light  )
 	{
 		//	tex2DProjじゃないといけないと何かに書いてあった気がします
 		HALF	shadowed = tex2Dproj( gSMP_ShadowMap , position_in_light ).x;
 		return	shadowed;
-	}	
-	
+	}
+
 	HALF __GetShadowRate_PCF16( float4 position_in_light  )
 	{
 		//	1テクセル分のオフセット
 		float	offset = 1.0f / SHADOWMAP_SIZE;
-		float4	aOffsets[] = { 
+		float4	aOffsets[] = {
 			float4( 0 ,		0,			0 , 0 ),
 			float4( 0 , offset,			0 , 0 ),
 			float4( 0 , -offset,		0 , 0 ),
@@ -55,7 +55,7 @@
 			float4( offset , -offset,	0 , 0 ),
 			float4( offset , offset,	0 , 0 ),
 		};
-		HALF	shadowed = 0 ; 
+		HALF	shadowed = 0 ;
 		for ( int i = 0 ; i < 9 ; ++i )
 			shadowed += tex2Dproj( gSMP_ShadowMap , position_in_light + aOffsets[i] * position_in_light.w ).x;
 		return	shadowed / 9.0f;
@@ -71,12 +71,12 @@
 			float4( offset  , -offset,	0 ,	0 ),
 			float4( offset  , offset,	0 , 0 ),
 		};
-		HALF	shadowed = 0 ; 
+		HALF	shadowed = 0 ;
 		for ( int i = 0 ; i < 4 ; ++i )
 			shadowed += tex2Dproj( gSMP_ShadowMap , position_in_light + aOffsets[i] * position_in_light.w ).x;
 		return	shadowed / 4.0f;
 	}
-	
+
 	HALF __GetShadowRate_PCF16L( float4 position_in_light  )
 	{
 		//	1テクセル分のオフセット
@@ -87,32 +87,32 @@
 			float4( offset  , -offset,	0 ,	0 ),
 			float4( offset  , offset,	0 , 0 ),
 		};
-		HALF	shadowed = 0 ; 
+		HALF	shadowed = 0 ;
 		//shadowed += tex2Dproj( gSMP_ShadowMap , position_in_light ).x;
 		for ( int i = 0 ; i < 4 ; ++i )
 			shadowed += tex2Dproj( gSMP_ShadowMap , position_in_light + aOffsets[i] * position_in_light.w ).x;
 		return	shadowed / 4.0f;
 	}
-	
-		
+
+
 	HALF __GetShadowRate_Rotated4( float4 position_in_light  )
 	{
 		//	1テクセル分のオフセット
 		float	offset = 0.7f / SHADOWMAP_SIZE;
 		float	gap    = 0.2f / SHADOWMAP_SIZE;
-		
+
 		float4	aOffsets[] = {
 			float4( -offset , gap   ,	0 , 0 ),
 			float4(  gap    , offset,	0 , 0 ),
 			float4( offset  , -gap,	0 ,	0 ),
 			float4( -gap    , -offset,	0 , 0 ),
 		};
-		HALF	shadowed = 0 ; 
+		HALF	shadowed = 0 ;
 		for ( int i = 0 ; i < 4 ; ++i )
 			shadowed += tex2Dproj( gSMP_ShadowMap , position_in_light + aOffsets[i] * position_in_light.w ).x;
 		return	shadowed / 4.0f;
 	}
-		
+
 	HALF __GetShadowRate_PossonDisc9( float4 position_in_light  )
 	{
 		//	2テクセル分のオフセット
@@ -131,8 +131,8 @@
 									//float4( 0.89642f,   0.412458f , 0 , 0 ),
 									//float4(-0.32194f,  -0.932615f , 0 , 0 ),
 									float4(-0.791559f, -0.59771f	, 0 , 0 )	};
-		
-		HALF	shadowed = 0 ; 
+
+		HALF	shadowed = 0 ;
 		for ( int i = 0 ; i < 9 ; ++i )
 			shadowed += tex2Dproj( gSMP_ShadowMap , position_in_light + poissonDisc[i] * offset ).x / 9.0f;
 		return	shadowed;
@@ -156,8 +156,8 @@
 									//float4( 0.89642f,   0.412458f , 0 , 0 ),
 									//float4(-0.32194f,  -0.932615f , 0 , 0 ),
 									float4(-0.791559f, -0.59771f	, 0 , 0 )	};
-		
-		HALF	shadowed = 0 ; 
+
+		HALF	shadowed = 0 ;
 		for ( int i = 0 ; i < N ; ++i )
 			shadowed += tex2Dproj( gSMP_ShadowMap , position_in_light + poissonDisc[i] * offset ).x;
 		return	shadowed / (float)N;
@@ -209,7 +209,7 @@
 			tfetch2D SampledDepth._x__, vShadowCoord.xy, gSMP_ShadowMap, OffsetX =  0.5, OffsetY = -0.5
 			tfetch2D SampledDepth.__x_, vShadowCoord.xy, gSMP_ShadowMap, OffsetX = -0.5, OffsetY =  0.5
 			tfetch2D SampledDepth.___x, vShadowCoord.xy, gSMP_ShadowMap, OffsetX =  0.5, OffsetY =  0.5
-	        
+
 //			getWeights2D Weights, vShadowCoord.xy, DepthTex, MagFilter=linear, MinFilter=linear, UseComputedLOD=false, UseRegisterLOD=true
 		};
 //	    Weights = float4( (1-Weights.x)*(1-Weights.y), Weights.x*(1-Weights.y), (1-Weights.x)*Weights.y, Weights.x*Weights.y );
@@ -218,46 +218,46 @@
 		//とりあえずリニアにはしない
 		Weights = 0.25f;
 		float4 Attenuation = (vShadowCoord.zzzz< SampledDepth); //Depth値が小さいとかげになる、 Depthが反転しているので
-    
+
 		return dot( Attenuation, Weights );
 	}
-	
+
 	HALF __GetShadowRate_PCF9( float4 position_in_light  )
 	{
 		float3 vShadowCoord = position_in_light.xyz/position_in_light.w;
 		float4 SampledDepth;
 		float SampledDepth2;
-		
+
 		asm {
 			tfetch2D SampledDepth.x___, vShadowCoord.xy, gSMP_ShadowMap, OffsetX = -1.0, OffsetY = -1.0
 			tfetch2D SampledDepth._x__, vShadowCoord.xy, gSMP_ShadowMap, OffsetX =  0.0, OffsetY = -1.0
 			tfetch2D SampledDepth.__x_, vShadowCoord.xy, gSMP_ShadowMap, OffsetX =  1.0, OffsetY = -1.0
 			tfetch2D SampledDepth.___x, vShadowCoord.xy, gSMP_ShadowMap, OffsetX = -1.0, OffsetY =  0.0
-		};			
+		};
 		float4 Attenuation = (vShadowCoord.zzzz< SampledDepth); //Depth値が小さいとかげになる、 Depthが反転しているので
 		HALF shadowed = dot( Attenuation, 1.0f);
 
-		asm {	        
+		asm {
 			tfetch2D SampledDepth.x___, vShadowCoord.xy, gSMP_ShadowMap, OffsetX =  0.0, OffsetY = 0.0
 			tfetch2D SampledDepth._x__, vShadowCoord.xy, gSMP_ShadowMap, OffsetX =  1.0, OffsetY = 0.0
 			tfetch2D SampledDepth.__x_, vShadowCoord.xy, gSMP_ShadowMap, OffsetX = -1.0, OffsetY = 1.0
 			tfetch2D SampledDepth.___x, vShadowCoord.xy, gSMP_ShadowMap, OffsetX =  0.0, OffsetY = 1.0
-			
+
 			tfetch2D SampledDepth2	   , vShadowCoord.xy, gSMP_ShadowMap, OffsetX =  1.0, OffsetY = 1.0
 		};
 		Attenuation = (vShadowCoord.zzzz< SampledDepth); //Depth値が小さいとかげになる、 Depthが反転しているので
-		float  Attenuation2 = (vShadowCoord.z< SampledDepth2); 
+		float  Attenuation2 = (vShadowCoord.z< SampledDepth2);
 		shadowed += dot( Attenuation, 1.0f) + Attenuation2;
 
 		return shadowed/9.0f;
-	}	
-	
-	
+	}
+
+
 	HALF __GetShadowRate_PCF16( float4 position_in_light  )
 	{
 		float3 vShadowCoord = position_in_light.xyz/position_in_light.w;
 		float4 SampledDepth;
-		
+
 		asm {
 			tfetch2D SampledDepth.x___, vShadowCoord.xy, gSMP_ShadowMap, OffsetX = -1.5, OffsetY = -1.5
 			tfetch2D SampledDepth._x__, vShadowCoord.xy, gSMP_ShadowMap, OffsetX = -0.5, OffsetY = -1.5
@@ -266,7 +266,7 @@
 		};
 		float4 Attenuation = (vShadowCoord.zzzz< SampledDepth); //Depth値が小さいとかげになる、 Depthが反転しているので
 		HALF shadowed = dot( Attenuation, 1.0f);
-	        
+
 		asm {
 			tfetch2D SampledDepth.x___, vShadowCoord.xy, gSMP_ShadowMap, OffsetX = -1.5, OffsetY = -0.5
 			tfetch2D SampledDepth._x__, vShadowCoord.xy, gSMP_ShadowMap, OffsetX = -0.5, OffsetY = -0.5
@@ -275,8 +275,8 @@
 		};
 		Attenuation = (vShadowCoord.zzzz< SampledDepth);
 		shadowed += dot( Attenuation, 1.0f);
-		
-		asm {	
+
+		asm {
 			tfetch2D SampledDepth.x___, vShadowCoord.xy, gSMP_ShadowMap, OffsetX =  0.5, OffsetY = 0.5
 			tfetch2D SampledDepth._x__, vShadowCoord.xy, gSMP_ShadowMap, OffsetX =  0.5, OffsetY = 0.5
 			tfetch2D SampledDepth.__x_, vShadowCoord.xy, gSMP_ShadowMap, OffsetX =  0.5, OffsetY = 0.5
@@ -295,12 +295,12 @@
 		shadowed += dot( Attenuation, 1.0f);
 
 		return shadowed/16.0f;
-	}	
+	}
 #endif //#ifdef _X360
-	
-	
-		
-	
+
+
+
+
 #ifdef _WIN32
 	//QLOC: rewritten with new capabilities (DX11,ORBIS)
 	float DecodeDepthCmp(const float3 uvw) {
@@ -314,10 +314,10 @@
 		float retval = 0.0f;
 		const float3 vShadowCoord = position_in_light.xyz/position_in_light.w;
 		retval += DecodeDepthCmp(vShadowCoord);
-  
+
 		return retval;
 	}
-	
+
 	float __GetShadowRate_PCF9(const float4 position_in_light)
 	{
 		float retval = 0.0f;
@@ -331,12 +331,12 @@
 				DecodeDepthCmp(vShadowCoord, int2(1, 1))
 			);
 			retval += dot(attenuation, weight).x;
-		}		
+		}
 
 		return retval;
-	}	
-	
-	
+	}
+
+
 	float __GetShadowRate_PCF16(const float4 position_in_light)
 	{
 		float retval = 0.0f;
@@ -365,15 +365,15 @@
 				DecodeDepthCmp(vShadowCoord, int2(1,1))
 				);
 			retval += attenuation * weight.x;
-		}		
+		}
 
 		return retval;
-	}	
+	}
 #endif //#ifdef _WIN32
-	
-	
-		
-	
+
+
+
+
 	//	関数を生成するマクロ
 	#if	1
 #define		DECL_SHADOW_FUNC( FuncName , ShadowFunc )										\
@@ -402,10 +402,10 @@
 			}																				\
 			return rate;																	\
 		}
-	
+
 	#endif
-	
-	
+
+
 
 #ifdef _PS3
 DECL_SHADOW_FUNC( GetShadowRate_PCF4 , 		__GetShadowRate_PCF4 )
@@ -433,22 +433,22 @@ DECL_SHADOW_FUNC( GetShadowRate_PCF4 , 		__GetShadowRate_PCF4 )
 DECL_SHADOW_FUNC( GetShadowRate_PCF9  , 	__GetShadowRate_PCF9 )
 DECL_SHADOW_FUNC( GetShadowRate_PCF16 , 	__GetShadowRate_PCF16 )
 #endif
-	
+
 	float3	CalcGetShadowRate( float4 position_in_light, float3 normal, float4 eyeVec = 0)
 	{
 		float NdotL = dot( gFC_ShadowLightDir.xyz, normal);
 		float fShadow = (NdotL+gFC_ShadowMapParam.x) * gFC_ShadowMapParam.w; //gFC_ShadowMapParam.w　影を落とすモデルかどうか　1:おとす。0:落とさない
 		fShadow = saturate(fShadow);
-		return pow(GetShadowRate_PCF16(position_in_light, fShadow, eyeVec), gFC_DebugPointLightParams.z);
-		
+		return pow(abs(GetShadowRate_PCF16(position_in_light, fShadow, eyeVec)), gFC_DebugPointLightParams.z);
+
 //		float dbgNewShadow = (gFC_ShadowMapParam.x > -1.0f);
-//		
+//
 //		float3 retVal = GetShadowRate_PCF16L( position_in_light , fShadow, eyeVec) * dbgNewShadow;
 //		retVal += GetShadowRate_PCF4( position_in_light , 0.0f, eyeVec) * (1.0f-dbgNewShadow);
 //		return retVal;
 	}
-	
-	
+
+
 	//VertexShaderで　World空間での位置をShadowMap空間に変換する
 	//ジオメトリが一個のShadowMap空間完全含まれた時
 	//ClampのみはPIXELで行う
@@ -456,30 +456,30 @@ DECL_SHADOW_FUNC( GetShadowRate_PCF16 , 	__GetShadowRate_PCF16 )
 	{
 		float4 clamp_qloc_renamed = gFC_ShadowMapClamp0;
 		clamp_qloc_renamed *= position_in_light.w;
-	
+
 		// Clamp
 		position_in_light.xy -= (position_in_light.xy < clamp_qloc_renamed.xy)*position_in_light.w; //画面外に
 		position_in_light.xy += (position_in_light.xy > clamp_qloc_renamed.zw)*position_in_light.w;
 
 		return CalcGetShadowRate( position_in_light, normal, eyeVec);
 	}
-	
-		
+
+
 	//PixelShaderで　PixelのWorld空間での位置をShadowMap空間に変換する Cascade
 	float3 CalcGetShadowRateWorldSpace( float4 worldspace_Pos, float3 normal, float4 eyeVec = 0)
 	{
 		float4x4 shadowMtx;
-		
+
 		//float camDist = eyeVec.w; //カメラからの距離
 		float  viewZ = worldspace_Pos.w;
-		
+
 		float4 zGreater = (gFC_ShadowStartDist < viewZ);
 		float4 clamp_qloc_renamed = 0;
 
 #if defined(_PS3)//PS3
 	#if 0
-			int  slice = dot(zGreater, 1.0f ) - 1;	
-		 	
+			int  slice = dot(zGreater, 1.0f ) - 1;
+
 			//float4 pos = mul(worldPos, gFC_ShadowMapMtxArray[slice] );
 			if(slice == 0)
 			{
@@ -488,7 +488,7 @@ DECL_SHADOW_FUNC( GetShadowRate_PCF16 , 	__GetShadowRate_PCF16 )
 			}
 			else if(slice == 1)
 			{
-				shadowMtx = gFC_ShadowMapMtxArray1;		
+				shadowMtx = gFC_ShadowMapMtxArray1;
 				clamp_qloc_renamed = gFC_ShadowMapClamp1;
 			}
 			else if(slice == 2)
@@ -505,31 +505,31 @@ DECL_SHADOW_FUNC( GetShadowRate_PCF16 , 	__GetShadowRate_PCF16 )
 			float4 fEndDist = float4(gFC_ShadowStartDist.yzw, 65535.0f);
 			float4 zLess = (fEndDist >= viewZ);
 			float4 fWeight = zGreater* zLess;
-						
+
 			shadowMtx = gFC_ShadowMapMtxArray0* fWeight.x;
 			shadowMtx += gFC_ShadowMapMtxArray1* fWeight.y;
 			shadowMtx += gFC_ShadowMapMtxArray2* fWeight.z;
 			shadowMtx += gFC_ShadowMapMtxArray3* fWeight.w;
-			
+
 			clamp_qloc_renamed = gFC_ShadowMapClamp0* fWeight.x;
 			clamp_qloc_renamed += gFC_ShadowMapClamp1* fWeight.y;
 			clamp_qloc_renamed += gFC_ShadowMapClamp2* fWeight.z;
 			clamp_qloc_renamed += gFC_ShadowMapClamp3* fWeight.w;
 	#endif
 #elif defined(_X360) || defined(_DX11)//XBOX360
-			int  slice = dot(zGreater, 1.0f ) - 1;	
+			int  slice = dot(zGreater, 1.0f ) - 1;
 			shadowMtx = gFC_ShadowMapMtxArray[slice];
 			clamp_qloc_renamed = gFC_ShadowMapClamp[slice];
 #elif defined(_WIN32)//WIN32
 			float4 fEndDist = float4(gFC_ShadowStartDist.yzw, 65535.0f);
 			float4 zLess = (fEndDist >= viewZ);
 			float4 fWeight = zGreater* zLess;
-						
+
 			shadowMtx = gFC_ShadowMapMtxArray0* fWeight.x;
 			shadowMtx += gFC_ShadowMapMtxArray1* fWeight.y;
 			shadowMtx += gFC_ShadowMapMtxArray2* fWeight.z;
 			shadowMtx += gFC_ShadowMapMtxArray3* fWeight.w;
-			
+
 			clamp_qloc_renamed = gFC_ShadowMapClamp0* fWeight.x;
 			clamp_qloc_renamed += gFC_ShadowMapClamp1* fWeight.y;
 			clamp_qloc_renamed += gFC_ShadowMapClamp2* fWeight.z;
@@ -537,38 +537,38 @@ DECL_SHADOW_FUNC( GetShadowRate_PCF16 , 	__GetShadowRate_PCF16 )
 #else
 	不明
 #endif
-	
-		float4  worldPos = float4(worldspace_Pos.xyz, 1.0f);	
+
+		float4  worldPos = float4(worldspace_Pos.xyz, 1.0f);
 		float4 position_in_light = mul( worldPos, shadowMtx);
-		
+
 		clamp_qloc_renamed *= position_in_light.w;
-	
+
 		// Clamp
 		position_in_light.xy -= (position_in_light.xy < clamp_qloc_renamed.xy)*position_in_light.w; //画面外に
 		position_in_light.xy += (position_in_light.xy > clamp_qloc_renamed.zw)*position_in_light.w;
-		
+
 		return CalcGetShadowRate( position_in_light, normal, eyeVec);
 	}
-	
-	
-	
+
+
+
 	//PixelShaderで　PixelのWorld空間での位置をShadowMap空間に変換する NoCascade
 	//CascadeではないけどPixel計算する、水面の影で使う
 	//水面の場合HeightMapからの高さでDisplceしているので、一つの影スライスに収まるモデルでも
 	//PixelShaderでライト空間位置を計算する。(収まらないのは普通にCascade)
 	float3 CalcGetShadowRateWorldSpaceNoCsd( float4 worldspace_Pos, float3 normal, float4 eyeVec = 0)
 	{
-		float4  worldPos = float4(worldspace_Pos.xyz, 1.0f);	
+		float4  worldPos = float4(worldspace_Pos.xyz, 1.0f);
 		float4 position_in_light = mul( worldPos, gFC_ShadowMapMtxArray0);
 		float4 clamp_qloc_renamed = gFC_ShadowMapClamp0*position_in_light.w;
-	
+
 		// Clamp
 		position_in_light.xy -= (position_in_light.xy < clamp_qloc_renamed.xy)*position_in_light.w; //画面外に
 		position_in_light.xy += (position_in_light.xy > clamp_qloc_renamed.zw)*position_in_light.w;
-		
+
 		return CalcGetShadowRate( position_in_light, normal, eyeVec);
 	}
-	
+
 #define			GetShadowRate_Cube( a )				(1)
 //	使っては駄目です。
 //	分かりやすい様に変な色にしておく

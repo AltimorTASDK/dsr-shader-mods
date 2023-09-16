@@ -39,6 +39,24 @@
 #pragma argument(nofastmath)
 #endif
 
+
+
+
+
+
+//**バーテックスシェーダ定数
+#ifdef ENABLE_VS
+	#include "FRPG_Common_VC.fxh"
+#endif
+
+
+
+
+//**フラグメントシェーダ定数
+#ifdef ENABLE_FS
+	#include "FRPG_Common_FC.fxh"
+#endif
+
 #include "../Common/dx11.h" //qloc: dx11
 #include "../Common/FRPG_HALFDefine.fxh"
 
@@ -102,7 +120,11 @@
 	struct GBUFFER_OUT
 	{
 		float4 GBuffer0 : SV_Target0;
+#ifdef UNMODIFIED
 		float GBuffer1 : SV_Target1; //qloc: subsurface scattering strength. We don't seem to ever modify it so it might be a good idea to move it to the stencil
+#else
+		float4 GBuffer1 : SV_Target1; //qloc: subsurface scattering strength. We don't seem to ever modify it so it might be a good idea to move it to the stencil
+#endif
 	};
 	//!フラグメントシェーダ出力
 	struct FRAGMENT_OUT
@@ -115,24 +137,6 @@
 		float4 Color : SV_Target0;
 		float4 Glow : SV_Target1;
 	};
-#endif
-
-
-
-
-
-
-//**バーテックスシェーダ定数
-#ifdef ENABLE_VS
-	#include "FRPG_Common_VC.fxh"
-#endif
-
-
-
-
-//**フラグメントシェーダ定数
-#ifdef ENABLE_FS
-	#include "FRPG_Common_FC.fxh"
 #endif
 
 
@@ -871,6 +875,7 @@ CalcGetLightScatteringCol(float4 inCol, float4 eyeVec)
 
 
 
+#ifdef UNMODIFIED
 
 //VSLS
 /*-------------------------------------------------------------------*//*!
@@ -967,6 +972,8 @@ CalcGetLightScatteringAddFactor(float4 scatCol)
 }
 
 
+
+#endif // UNMODIFIED
 
 
 
@@ -1271,7 +1278,7 @@ float4 TexDiff2(float2 uv)
 float4 TexLightmap(float2 uv)
 {
 	float4 lightMapVal = tex2D(gSMP_LightMap, uv);
-	lightMapVal.rgb = pow(lightMapVal.rgb, gFC_DebugPointLightParams.z);
+	lightMapVal.rgb = pow(abs(lightMapVal.rgb), gFC_DebugPointLightParams.z);
 	//lightMapVal.rgb = pow(lightMapVal.rgb, gFC_DebugPointLightParams.z)*gFC_DebugPointLightParams.y;// (TODO: increase contrast between white and black (common value is 100 for lit areas and 25 for dark areas)
 	return lightMapVal;
 }

@@ -28,7 +28,6 @@
 #include "FRPG_Common.fxh"
 
 
-#define USE_SH
 #define WITH_Glow
 #define FS_TRANSLUCENT
 /*-------------------------------------------------------------------*//*!

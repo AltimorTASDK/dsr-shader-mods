@@ -28,7 +28,11 @@
 #define DFG_TEXTURE_SIZE 128.0f
 
 #define gFC_DifMapMultiplier gFC_LightProbeParam.x
+#ifdef UNMODIFIED
 #define gFC_SpcMapMultiplier gFC_LightProbeParam.y
+#else
+#define gFC_SpcMapMultiplier gFC_LightProbeParam.x
+#endif
 #define gFC_LightProbeMipCount gFC_LightProbeParam.w
 #define gFC_LightProbeSlot gFC_LightProbeParam.z
 #define gSMP_LightProbeDif gSMP_EnvDifMap
@@ -108,17 +112,41 @@ struct MATERIAL
 	float LightPower;
 };
 
-GBUFFER_OUT PackGBuffer(MATERIAL mtl)
+GBUFFER_OUT PackGBuffer(GBUFFER_OUT Out, MATERIAL mtl)
 {
-	GBUFFER_OUT Out;
+	float3 scatter;
+
+	switch (gFC_DebugDraw.x) {
+	default:
+	#ifdef FS_SUBSURF
+		scatter = float3(mtl.SubsurfStrength / 10.0f, 0, 0);
+	#else
+		scatter = float3(0, 0, 0);
+	#endif
+		break;
+	case 1:
+		scatter = mtl.LitColor.rgb;
+		break;
+	case 2:
+		scatter = Linear2srgb(mtl.DiffuseColor);
+		break;
+	case 3:
+		scatter = Linear2srgb(mtl.SpecularColor);
+		break;
+	case 4:
+		scatter = mtl.EmissiveColor;
+		break;
+	case 5:
+		scatter = mtl.Normal * 0.49804f + 0.49804f;
+		break;
+	case 6:
+		scatter = float3(mtl.Roughness, 0, 0);
+		break;
+	}
 
 	//light
-	Out.GBuffer0 = mtl.LitColor;
-#ifdef FS_SUBSURF
-	Out.GBuffer1.x = mtl.SubsurfStrength / 10.0f;
-#else
-	Out.GBuffer1.x = 0.0f;
-#endif
+	Out.GBuffer0.rgb = mtl.LitColor.rgb;
+	Out.GBuffer1 = float4(scatter, 0);
 
 	return Out;
 }
@@ -212,6 +240,7 @@ float3 PointLightContribution(float3 N, float3 L, float3 V,
 	// Cf https://seblagarde.wordpress.com/2012/01/08/pi-or-not-to-pi-in-game-lighting-equation/
 
 	float lampAtt;
+#ifdef UNMODIFIED
 	switch (falloffMode)
 	{
 	default:
@@ -225,15 +254,20 @@ float3 PointLightContribution(float3 N, float3 L, float3 V,
 		lampAtt = unrealOffsetAttenuation(LampDist, LampFalloffEnd, OneOverFalloffEndMinusStart);
 		break;
 	case LAMP_FALLOFF_PERCEIVED_LINEAR:
+#endif
 		lampAtt = perceivedLinear(LampDist, LampFalloffEnd, OneOverFalloffEndMinusStart);
+#ifdef UNMODIFIED
 		break;
 	case LAMP_FALLOFF_FIXED_LINEAR:
 		lampAtt = linearAttenuation(LampDist, LampFalloffEnd, OneOverFalloffEndMinusStart);
 		break;
 	}
+#endif
 
 	return  saturate(dot(N, L)) * ((diffContrib + specContrib)	* LampColor * lampAtt * M_PI);
 }
+
+#ifdef UNMODIFIED
 
 #define SUN_RADIUS 0.5f * M_PI/180.0f
 
@@ -285,6 +319,8 @@ float3 SunContributionSeparated(float3 diffColor, float3 specColor, float specF9
 	return diffContrib;
 }
 
+#endif //UNMODIFIED
+
 //--------------------------------------------------------------------------------------
 // Light probe
 //--------------------------------------------------------------------------------------
@@ -335,6 +371,7 @@ static const float c3 = 0.743125;
 static const float c4 = 0.886227;
 static const float c5 = 0.247708;
 
+#ifdef USE_SH
 //TODO: this could probably be further optimized wrt packing/unpacking
 //look into one of the examples
 float3 CalcSH(float3 N, float4 worldPos)
@@ -360,13 +397,18 @@ float3 CalcSH(float3 N, float4 worldPos)
 	return 0.0f;
 #endif
 }
+#endif //USE_SH
 
 float3 CalcDiffuseLD(float3 dominantN)
 {
+#ifdef UNMODIFIED
 #ifndef USE_SH
 	return gFC_EnvDifMapMulCol.rgb * (gFC_DifMapMultiplier *texCUBElod(gSMP_LightProbeDif, float4(dominantN, 0.0f)).rgb + gFC_MagicLightParam.x * texCUBElod(gSMP_EnvDifMap2, float4(dominantN, 0.0f)).rgb);
 #else
 	return gFC_MagicLightParam.x * gFC_DifMapMultiplier * gFC_EnvDifMapMulCol.rgb * texCUBElod(gSMP_LightProbeDif, float4(dominantN, 0.0f)).rgb;
+#endif
+#else
+	return gFC_EnvDifMapMulCol.rgb * gFC_DifMapMultiplier * texCUBElod(gSMP_LightProbeDif, float4(dominantN, 0.0f)).rgb;
 #endif
 }
 
@@ -374,7 +416,11 @@ float3 CalcSpecularLD(float3 dominantR, float roughness)
 {
 	float mipLevel = linearRoughnessToMipLevel(roughness, gFC_LightProbeMipCount);
 	//add directional light
+#ifdef UNMODIFIED
 	return gFC_EnvSpcMapMulCol.rgb * (gFC_SpcMapMultiplier * texCUBElod(gSMP_LightProbeSpec, float4(dominantR, mipLevel)).rgb + gFC_MagicLightParam.y * texCUBElod(gSMP_EnvSpcMap2, float4(dominantR, mipLevel)).rgb);
+#else
+	return gFC_EnvSpcMapMulCol.rgb * gFC_SpcMapMultiplier * texCUBElod(gSMP_LightProbeSpec, float4(dominantR, mipLevel)).rgb;
+#endif
 }
 
 float3 CalcHemAmbient(float3 dominantN)
@@ -394,33 +440,33 @@ float3 evaluateIBLDiffuse(float3 N, float3 V, float NdotV, float roughness)
 	//ignore dominant shift since we're not sure it goes well with lambert
 	//float3 dominantN = getDiffuseDominantDir_forLightProbe(N, V, NdotV, roughness);
 	//float3 diffuseLighting = CalcDiffuseLD(dominantN);
-	
+
 	float3 diffuseLighting = CalcDiffuseLD(N);
-	
+
 	return diffuseLighting;
 }
 
 float3 evaluateIBLSpecular(float3 N, float3 R, float3 vertexNormal, float NdotV, float roughness, float3 f0, float3 f90)
 {
 	float3 dominantR = getSpecularDominantDir_forLightProbe(N, R, roughness);
-	
+
 	// Rebuild the function
 	// L . D. ( f0.Gv.(1-Fc) + Gv.Fc ) . cosTheta / (4 . NdotL . NdotV)
 	float3 preLD = CalcSpecularLD(dominantR, roughness);
-	
+
 	// Horizon fading trick from http://marmosetco.tumblr.com/post/81245981087
 	float ndl = dot(vertexNormal, R);
 	const float horizonFade = 1.3;
 	float horiz = clamp(1.0 + horizonFade * ndl, 0.0, 1.0);
 	horiz *= horiz;
 	preLD *= horiz;
-	
+
 	// Sample pre-integrate DFG
 	// Fc = (1-H.L)^5
 	// PreIntegratedDFG.r = Gv.(1-Fc)
 	// PreIntegratedDFG.g = Gv.Fc
 	float2 preDFG = CalcSpecularDFG(NdotV, roughness);
-	
+
 	// LD . ( f0.Gv.(1-Fc) + Gv.Fc.f90 )
 	return preLD * (f0 * preDFG.x + f90 * preDFG.y);
 }
@@ -513,24 +559,23 @@ float3 CalcPointLightsClustered(MATERIAL Mtl, float3 V, float3 worldPos, float s
 	//clustered
 	uint3 clusterCoords = GetClusterCoords(worldPos);
 	uint offsetNum = numLightsBuffer[(clusterCoords.z * CLUSTER_COUNT_Y + clusterCoords.y) * CLUSTER_COUNT_X + clusterCoords.x].offsetNum;
-	uint offset = offsetNum >> 8;
-	uint lightNum = offsetNum & 0xff;
-	if (lightNum > 0) {
-		for (uint i = 0; i < min(lightNum, gFC_PntLightCount.x); ++i) {
-			uint lightID = lightIDBuffer[offset + i].id;
-			float4 lightPosition = lightParamBuffer[lightID].position;
-			float4 lightColor = lightParamBuffer[lightID].color;
-			float attenuation = lightParamBuffer[lightID].attenuation;
-			uint falloffMode = lightParamBuffer[lightID].falloffMode;
-			float3 L = lightPosition.xyz - worldPos;
-			float distL = length(L);
-			if (distL < lightColor.w) {
-				L *= 1.0 / distL;
-				pointLightComponent += PointLightContribution(Mtl.Normal, L, V,
-					Mtl.DiffuseColor, Mtl.SpecularColor, specularF90,
-					Mtl.Roughness, lightColor.xyz, distL,
-					lightPosition.w, lightColor.w, falloffMode) * lerp(lightmapShadow, 1, attenuation);
-			}
+	uint lightNum = min(offsetNum & 0x3f, gFC_PntLightCount.x);
+	uint offset = offsetNum >> 12;
+	for (uint i = offset; i < offset + lightNum; ++i) {
+		uint lightID = lightIDBuffer[i].id & 0x1ff;
+		float4 lightPosition = lightParamBuffer[lightID].position;
+		float4 lightColor = lightParamBuffer[lightID].color;
+		float attenuation = lightParamBuffer[lightID].attenuation;
+		uint falloffMode = lightParamBuffer[lightID].falloffMode;
+		float3 L = lightPosition.xyz - worldPos;
+		float distL = length(L);
+		if (distL < lightColor.w) {
+			float lightmapFactor = lerp(lightmapShadow, 1, attenuation);
+			L /= distL;
+			pointLightComponent += PointLightContribution(Mtl.Normal, L, V,
+				Mtl.DiffuseColor, Mtl.SpecularColor, specularF90,
+				Mtl.Roughness, lightColor.xyz, distL,
+				lightPosition.w, lightColor.w, falloffMode) * lightmapFactor;
 		}
 	}
 
@@ -564,6 +609,7 @@ float3 CalcEnvIBL(MATERIAL Mtl, float3 vertexNormal, float3 V, float3 worldPos, 
 	float3 R = 2.0f * NdotV * Mtl.Normal - V; // reflection direction
 	NdotV = saturate(NdotV);
 
+	float3 specularIBL = evaluateIBLSpecular(Mtl.Normal, R, vertexNormal, NdotV, Mtl.Roughness, Mtl.SpecularColor, specularF90);
 	float3 diffuseIBL = evaluateIBLDiffuse(Mtl.Normal, V, NdotV, Mtl.Roughness);
 #ifdef USE_SH
 	if (gFC_SHEnabled != 0.0f) { // add SH component
@@ -571,7 +617,6 @@ float3 CalcEnvIBL(MATERIAL Mtl, float3 vertexNormal, float3 V, float3 worldPos, 
 	}
 #endif
 	diffuseIBL *= Mtl.DiffuseColor;
-	float3 specularIBL = evaluateIBLSpecular(Mtl.Normal, R, vertexNormal, NdotV, Mtl.Roughness, Mtl.SpecularColor, specularF90);
 
 	return Mtl.LightPower * (diffuseIBL + specularIBL);
 }
@@ -590,10 +635,10 @@ MATERIAL PackMaterial(float4 albedo, float4 pblTexData, float3 normal)
 
 		// this is actually slightly wrong but kept for compatibility
 		// we should split the color to diffuse/specular first and then multiply them by respective multipliers
-		float3 linearSampledColor = Srgb2linear(saturate(albedo.rgb * lerp(gFC_DifMapMulCol.rgb, gFC_SpcMapMulCol.rgb, MetalMask)));
+		float3 linearSampledColor = Srgb2linear(abs(albedo.rgb * lerp(gFC_DifMapMulCol.rgb, gFC_SpcMapMulCol.rgb, MetalMask)));
 
 		Mtl.DiffuseColor = Mtl.LightPower * linearSampledColor * (1.f - MetalMask);
-		Mtl.SpecularColor = Mtl.LightPower * lerp(DiffuseF0, linearSampledColor, MetalMask);
+		Mtl.SpecularColor = saturate(Mtl.LightPower * lerp(DiffuseF0, linearSampledColor, MetalMask));
 		Mtl.EmissiveColor = EmissivePower * linearSampledColor; // emissive only works with metalness
 	}
 	else {
@@ -603,6 +648,20 @@ MATERIAL PackMaterial(float4 albedo, float4 pblTexData, float3 normal)
 		Mtl.Roughness = lerp(pblTexData.a, gFC_DebugMaterialParams.x - 1.0f, saturate(gFC_DebugMaterialParams.x));
 		Mtl.EmissiveColor = float3(0.0f, 0.0f, 0.0f);
 	}
+
+	if (gFC_DebugDraw.y != 0) {
+		int diffuseOverride = gFC_DebugDraw.y & 3;
+		int specularOverride = (gFC_DebugDraw.y >> 2) & 3;
+		switch (diffuseOverride) {
+		case 1: Mtl.DiffuseColor = float3(0, 0, 0); break;
+		case 2: Mtl.DiffuseColor = float3(1, 1, 1); break;
+		}
+		switch (specularOverride) {
+		case 1: Mtl.SpecularColor = float3(0, 0, 0); break;
+		case 2: Mtl.SpecularColor = float3(1, 1, 1); break;
+		}
+	}
+
 	Mtl.Normal = normal;
 
 	return Mtl;

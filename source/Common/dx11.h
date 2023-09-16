@@ -198,5 +198,3 @@ float4 qlocDoAlphaTest(const float4 outColor)
 #endif
 
 #endif
-
-#pragma warning (disable: 3571) // pow(f, e) will not work for negative f, use abs(f) or conditionally handle negative values if you expect them

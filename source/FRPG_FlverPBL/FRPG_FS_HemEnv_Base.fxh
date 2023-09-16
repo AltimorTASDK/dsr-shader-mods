@@ -72,7 +72,7 @@
 	FragmentMain_Dif___Bmp___LitSdw(VTX_OUT_CWL_NET_DL In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_Dif___Bmp___LitCsd(VTX_OUT_CW_NET_DL In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_Dif___Bmp___Lit___(VTX_OUT_CW_NET_DL In)
 			#endif
@@ -82,7 +82,7 @@
 	FragmentMain_Dif___Bmp______Sdw(VTX_OUT_CWL_NET_D In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_Dif___Bmp______Csd(VTX_OUT_CW_NET_D In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_Dif___Bmp_________(VTX_OUT_CW_NET_D In)
 			#endif
@@ -94,7 +94,7 @@
 	FragmentMain_Dif_________LitSdw(VTX_OUT_CWL_NE_DL In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_Dif_________LitCsd(VTX_OUT_CW_NE_DL In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_Dif_________Lit___(VTX_OUT_CW_NE_DL In)
 			#endif
@@ -104,7 +104,7 @@
 	FragmentMain_Dif____________Sdw(VTX_OUT_CWL_NE_D In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_Dif____________Csd(VTX_OUT_CW_NE_D In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_Dif_______________(VTX_OUT_CW_NE_D In)
 			#endif
@@ -123,11 +123,13 @@
 	}
 
 #ifdef WITH_BumpMap
+#ifdef UNMODIFIED
 	if (gFC_ParallaxParams.x > 0.0f) {
 		// qloc: we assume CALC_VS_BINORMAL is set (which is true on all our platforms)
 		// also removed other parallax mapping types since we only use this one now
 		difTexUV = ParallaxOcclusionMapping(difTexUV, gFC_ParallaxParams.x, In.VecEye.xyz, In.VecTan.xyz, In.VecBin, In.VecNrm.xyz);
 	}
+#endif //UNMODIFIED
 #endif //WITH_BumpMap
 
 #ifdef PLACEHOLDER
@@ -178,12 +180,14 @@
 	float3 envLightComponent = CalcEnvIBL(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90);
 
 	//directional lights
+#ifdef UNMODIFIED
 	float3 dirSpecular = float3(0.0f, 0.0f, 0.0f);
 	for (uint i = 0; i < clamp(gFC_DirLightCount.x, 0, MAX_DIR_LIGHTS); ++i) {
 		float3 outSpecular;
 		envLightComponent += SunContributionSeparated(Mtl.DiffuseColor, Mtl.SpecularColor, specularF90, Mtl.Roughness, -gFC_DirLightVec[i].xyz, gFC_DirLightCol[i], Mtl.Normal, In.VecEye.xyz, outSpecular);
 		dirSpecular += outSpecular;
 	}
+#endif //UNMODIFIED
 
 	float lightmapShadow = 1.0f; // used for shadowing static map point lights
 	{//lightmap and shadowmap
@@ -197,7 +201,7 @@
 					const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxWld, Mtl.Normal, In.VecEye).rgb;
 				#endif
 				envLightComponent *= min(shadowMapVal.rgb, lightMapVal.rgb)*gFC_DebugPointLightParams.y;
-				
+
 				lightmapShadow = lightMapVal.a*shadowMapVal.r; //QLOC: store shadowing from shadow map too
 			#else
 				//light map only
@@ -205,8 +209,8 @@
 				envLightComponent *= lightMapVal.rgb*gFC_DebugPointLightParams.y;
 
 				lightmapShadow = lightMapVal.a;
-			#endif				
-		#else			
+			#endif
+		#else
 			#ifdef WITH_ShadowMap
 				//shadow map only
 				#if (WITH_ShadowMap == CalcLispPos_VS)
@@ -244,7 +248,11 @@
 #endif // WITH_GhostMap
 	}
 
+#ifdef UNMODIFIED
 	Mtl.LitColor = float4((envLightComponent + pointLightComponent + emissiveComponent + dirSpecular), sampledColor.a);
+#else
+	Mtl.LitColor = float4((envLightComponent + pointLightComponent + emissiveComponent), sampledColor.a);
+#endif
 
 	{//Ghosting
 #ifdef WITH_GhostMap
@@ -278,7 +286,9 @@
 	SfxOut.Glow = Mtl.LitColor * gFC_GlowColor * min(gFC_ToneCorrectParams.x, 1);
 	return SfxOut;
 #else
-	return PackGBuffer(Mtl);
+	GBUFFER_OUT Out;
+	Out.GBuffer0.a = 1.0f;
+	return PackGBuffer(Out, Mtl);
 #endif
 }
 
@@ -306,7 +316,7 @@
 	FragmentMain_DifSpcBmp___LitSdw(VTX_OUT_CWL_NET_DLGG In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpcBmp___LitCsd(VTX_OUT_CW_NET_DLGG In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpcBmp___Lit___(VTX_OUT_CW_NET_DLGG In)
 			#endif
@@ -316,7 +326,7 @@
 	FragmentMain_DifSpcBmp______Sdw(VTX_OUT_CWL_NET_DGG In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpcBmp______Csd(VTX_OUT_CW_NET_DGG In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpcBmp_________(VTX_OUT_CW_NET_DGG In)
 			#endif
@@ -328,7 +338,7 @@
 	FragmentMain_DifSpc______LitSdw(VTX_OUT_CWL_NE_DLGG In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpc______LitCsd(VTX_OUT_CW_NE_DLGG In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpc______Lit___(VTX_OUT_CW_NE_DLGG In)
 			#endif
@@ -338,7 +348,7 @@
 	FragmentMain_DifSpc_________Sdw(VTX_OUT_CWL_NE_DGG In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpc_________Csd(VTX_OUT_CW_NE_DGG In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpc____________(VTX_OUT_CW_NE_DGG In)
 			#endif
@@ -352,7 +362,7 @@
 	FragmentMain_DifSpcBmp___LitSdw(VTX_OUT_CWL_NET_DL In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpcBmp___LitCsd(VTX_OUT_CW_NET_DL In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpcBmp___Lit___(VTX_OUT_CW_NET_DL In)
 			#endif
@@ -362,7 +372,7 @@
 	FragmentMain_DifSpcBmp______Sdw(VTX_OUT_CWL_NET_D In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpcBmp______Csd(VTX_OUT_CW_NET_D In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpcBmp_________(VTX_OUT_CW_NET_D In)
 			#endif
@@ -374,7 +384,7 @@
 	FragmentMain_DifSpc______LitSdw(VTX_OUT_CWL_NE_DL In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpc______LitCsd(VTX_OUT_CW_NE_DL In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpc______Lit___(VTX_OUT_CW_NE_DL In)
 			#endif
@@ -384,7 +394,7 @@
 	FragmentMain_DifSpc_________Sdw(VTX_OUT_CWL_NE_D In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpc_________Csd(VTX_OUT_CW_NE_D In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpc____________(VTX_OUT_CW_NE_D In)
 			#endif
@@ -403,11 +413,13 @@
 	}
 
 #ifdef WITH_BumpMap
+#ifdef UNMODIFIED
 	if (gFC_ParallaxParams.x > 0.0f) {
 		// qloc: we assume CALC_VS_BINORMAL is set (which is true on all our platforms)
 		// also removed other parallax mapping types since we only use this one now
 		difTexUV = ParallaxOcclusionMapping(difTexUV, gFC_ParallaxParams.x, In.VecEye.xyz, In.VecTan.xyz, In.VecBin, In.VecNrm.xyz);
 	}
+#endif //UNMODIFIED
 #endif //WITH_BumpMap
 
 	float4 sampledColor = TexDiff(difTexUV);
@@ -453,12 +465,14 @@
 	float3 envLightComponent = CalcEnvIBL(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90);
 
 	//directional lights
+#ifdef UNMODIFIED
 	float3 dirSpecular = float3(0.0f, 0.0f, 0.0f);
 	for (uint i = 0; i < clamp(gFC_DirLightCount.x, 0, MAX_DIR_LIGHTS); ++i) {
 		float3 outSpecular;
 		envLightComponent += SunContributionSeparated(Mtl.DiffuseColor, Mtl.SpecularColor, specularF90, Mtl.Roughness, -gFC_DirLightVec[i].xyz, gFC_DirLightCol[i], Mtl.Normal, In.VecEye.xyz, outSpecular);
 		dirSpecular += outSpecular;
 	}
+#endif //UNMODIFIED
 
 	float lightmapShadow = 1.0f; //used for shadowing static map point lights
 	{//lightmap and shadowmap
@@ -472,7 +486,7 @@
 					const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxWld, Mtl.Normal, In.VecEye).rgb;
 				#endif
 				envLightComponent *= min(shadowMapVal.rgb, lightMapVal.rgb)*gFC_DebugPointLightParams.y;
-				
+
 				lightmapShadow = lightMapVal.a*shadowMapVal.r; //QLOC: store shadowing from shadow map too
 			#else
 				//light map only
@@ -480,8 +494,8 @@
 				envLightComponent *= lightMapVal.rgb*gFC_DebugPointLightParams.y;
 
 				lightmapShadow = lightMapVal.a;
-			#endif				
-		#else			
+			#endif
+		#else
 			#ifdef WITH_ShadowMap
 				//shadow map only
 				#if (WITH_ShadowMap == CalcLispPos_VS)
@@ -501,7 +515,7 @@
 		const float3 aoMapVal = gSMP_AOMap.Load(int3(In.VtxClp.xy, 0)).rrr;
 		envLightComponent *= aoMapVal;
 	}
-	
+
 #if(POINT_LIGHT_0 >POINT_LIGHT_TYPE_None)
 	float3 pointLightComponent = CalcPointLightsLegacy(Mtl, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapShadow);
 #else
@@ -513,12 +527,16 @@
 		const float4 vecPnt = CalcGetGhostLightVec(In.VtxWld.xyz);	//Calculate and obtain the direction and damping coefficient of ghost light
 		const float3 colPnt = gFC_GhostLightCol.rgb * vecPnt.w;	//Attenuate point light source color
 		pointLightComponent += CalcGetGhostLightDifLightCol(Mtl.Normal, vecPnt.xyz, colPnt.rgb);	//Diffuse
-		
+
 		pointLightComponent += CalcGetGhostLightSpcLightCol(Mtl.Normal, gFC_SpcParam, vecPnt.xyz, colPnt.rgb);	//Specular
 		#endif // WITH_GhostMap
 	}
 
+#ifdef UNMODIFIED
 	Mtl.LitColor = float4((envLightComponent + pointLightComponent + emissiveComponent + dirSpecular), sampledColor.a);
+#else
+	Mtl.LitColor = float4((envLightComponent + pointLightComponent + emissiveComponent), sampledColor.a);
+#endif
 
 	{//Ghosting
 		#ifdef WITH_GhostMap
@@ -551,7 +569,9 @@
 	SfxOut.Glow = Mtl.LitColor * gFC_GlowColor * min(gFC_ToneCorrectParams.x, 1);
 	return SfxOut;
 #else
-	return PackGBuffer(Mtl);
+	GBUFFER_OUT Out;
+	Out.GBuffer0.a = 1.0f;
+	return PackGBuffer(Out, Mtl);
 #endif
 }
 
@@ -578,7 +598,7 @@
 	FragmentMain_Dif___BmpMulLitSdw(VTX_OUT_CWL_NETT_DDLGG In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_Dif___BmpMulLitCsd(VTX_OUT_CW_NETT_DDLGG In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_Dif___BmpMulLit___(VTX_OUT_CW_NETT_DDLGG In)
 			#endif
@@ -588,7 +608,7 @@
 	FragmentMain_Dif___BmpMul___Sdw(VTX_OUT_CWL_NETT_DDGG In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_Dif___BmpMul___Csd(VTX_OUT_CW_NETT_DDGG In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_Dif___BmpMul______(VTX_OUT_CW_NETT_DDGG In)
 			#endif
@@ -600,7 +620,7 @@
 	FragmentMain_Dif______MulLitSdw(VTX_OUT_CWL_NE_DDLGG In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_Dif______MulLitCsd(VTX_OUT_CW_NE_DDLGG In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_Dif______MulLit___(VTX_OUT_CW_NE_DDLGG In)
 			#endif
@@ -610,7 +630,7 @@
 	FragmentMain_Dif______Mul___Sdw(VTX_OUT_CWL_NE_DDGG In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_Dif______Mul___Csd(VTX_OUT_CW_NE_DDGG In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_Dif______Mul______(VTX_OUT_CW_NE_DDGG In)
 			#endif
@@ -624,7 +644,7 @@
 	FragmentMain_Dif___BmpMulLitSdw(VTX_OUT_CWL_NETT_DDL In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_Dif___BmpMulLitCsd(VTX_OUT_CW_NETT_DDL In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_Dif___BmpMulLit___(VTX_OUT_CW_NETT_DDL In)
 			#endif
@@ -634,7 +654,7 @@
 	FragmentMain_Dif___BmpMul___Sdw(VTX_OUT_CWL_NETT_DD In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_Dif___BmpMul___Csd(VTX_OUT_CW_NETT_DD In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_Dif___BmpMul______(VTX_OUT_CW_NETT_DD In)
 			#endif
@@ -646,7 +666,7 @@
 	FragmentMain_Dif______MulLitSdw(VTX_OUT_CWL_NE_DDL In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_Dif______MulLitCsd(VTX_OUT_CW_NE_DDL In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_Dif______MulLit___(VTX_OUT_CW_NE_DDL In)
 			#endif
@@ -656,7 +676,7 @@
 	FragmentMain_Dif______Mul___Sdw(VTX_OUT_CWL_NE_DD In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_Dif______Mul___Csd(VTX_OUT_CW_NE_DD In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_Dif______Mul______(VTX_OUT_CW_NE_DD In)
 			#endif
@@ -681,7 +701,9 @@
 	SfxOut.Glow = Mtl.LitColor * gFC_GlowColor * min(gFC_ToneCorrectParams.x, 1);
 	return SfxOut;
 #else
-	return PackGBuffer(Mtl);
+	GBUFFER_OUT Out;
+	Out.GBuffer0.a = 1.0f;
+	return PackGBuffer(Out, Mtl);
 #endif
 }
 
@@ -709,7 +731,7 @@
 	FragmentMain_DifSpcBmpMulLitSdw(VTX_OUT_CWL_NETT_DDLGG In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpcBmpMulLitCsd(VTX_OUT_CW_NETT_DDLGG In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpcBmpMulLit___(VTX_OUT_CW_NETT_DDLGG In)
 			#endif
@@ -719,7 +741,7 @@
 	FragmentMain_DifSpcBmpMul___Sdw(VTX_OUT_CWL_NETT_DDGG In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpcBmpMul___Csd(VTX_OUT_CW_NETT_DDGG In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpcBmpMul______(VTX_OUT_CW_NETT_DDGG In)
 			#endif
@@ -731,7 +753,7 @@
 	FragmentMain_DifSpc___MulLitSdw(VTX_OUT_CWL_NE_DDLGG In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpc___MulLitCsd(VTX_OUT_CW_NE_DDLGG In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpc___MulLit___(VTX_OUT_CW_NE_DDLGG In)
 			#endif
@@ -741,7 +763,7 @@
 	FragmentMain_DifSpc___Mul___Sdw(VTX_OUT_CWL_NE_DDGG In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpc___Mul___Csd(VTX_OUT_CW_NE_DDGG In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpc___Mul______(VTX_OUT_CW_NE_DDGG In)
 			#endif
@@ -755,7 +777,7 @@
 	FragmentMain_DifSpcBmpMulLitSdw(VTX_OUT_CWL_NETT_DDL In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpcBmpMulLitCsd(VTX_OUT_CW_NETT_DDL In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpcBmpMulLit___(VTX_OUT_CW_NETT_DDL In)
 			#endif
@@ -765,7 +787,7 @@
 	FragmentMain_DifSpcBmpMul___Sdw(VTX_OUT_CWL_NETT_DD In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpcBmpMul___Csd(VTX_OUT_CW_NETT_DD In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpcBmpMul______(VTX_OUT_CW_NETT_DD In)
 			#endif
@@ -777,7 +799,7 @@
 	FragmentMain_DifSpc___MulLitSdw(VTX_OUT_CWL_NE_DDL In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpc___MulLitCsd(VTX_OUT_CW_NE_DDL In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpc___MulLit___(VTX_OUT_CW_NE_DDL In)
 			#endif
@@ -787,7 +809,7 @@
 	FragmentMain_DifSpc___Mul___Sdw(VTX_OUT_CWL_NE_DD In)
 				#else //(WITH_ShadowMap == CalcLispPos_PS)
 	FragmentMain_DifSpc___Mul___Csd(VTX_OUT_CW_NE_DD In)
-				#endif 
+				#endif
 			#else
 	FragmentMain_DifSpc___Mul______(VTX_OUT_CW_NE_DD In)
 			#endif
@@ -795,6 +817,8 @@
 	#endif
 #endif
 {
+	GBUFFER_OUT Out;
+
 	float4 difTexUV = In.TexDifDif;
 
 	{//xyz - view vector, w - camera distance
@@ -802,11 +826,13 @@
 	}
 
 #ifdef WITH_BumpMap
+#ifdef UNMODIFIED
 	if (gFC_ParallaxParams.x > 0.0f) {
 		// qloc: we assume CALC_VS_BINORMAL is set (which is true on all our platforms)
 		// also removed other parallax mapping types since we only use this one now
 		difTexUV.xy = ParallaxOcclusionMapping(difTexUV.xy, gFC_ParallaxParams.x, In.VecEye.xyz, In.VecTan.xyz, In.VecBin, In.VecNrm.xyz);
 	}
+#endif //UNMODIFIED
 #endif //WITH_BumpMap
 
 	float4 sampledColor = TexDiff(difTexUV.xy);
@@ -815,9 +841,7 @@
 	sampledColor = float4(lerp(sampledColor.rgb, sampledColor2.rgb, In.ColVtx.a), 1.0)*float4(In.ColVtx.rgb, 1.0) * gFC_ModelMulCol;
 	sampledColor = qlocDoAlphaTest(sampledColor);
 
-	float4 pblTexData = tex2D(gSMP_PBLMap, difTexUV.xy).rgba;
-	float4 pblTexData2 = tex2D(gSMP_PBLMap2, In.TexDifDif.zw).rgba;
-	pblTexData = lerp(pblTexData.rgba, pblTexData2.rgba, In.ColVtx.a);
+	Out.GBuffer0.a = saturate(sampledColor.a);
 
 	//qloc: face is backwards, invert normal
 	if (!In.isFrontFace) {
@@ -840,6 +864,43 @@
 		#endif
 	}
 
+	float lightmapShadow = 1.0f; // used for shadowing static map point lights
+	float3 lightmapColor = 1.0f;
+	{//lightmap and shadowmap
+		#ifdef WITH_LightMap
+			#ifdef WITH_ShadowMap
+				//light map + shadow map
+				const float4 lightMapVal = TexLightmap(In.TexLit.xy);
+				#if (WITH_ShadowMap == CalcLispPos_VS)
+					const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxLit, In.VecNrm.xyz, In.VecEye).rgb;
+				#else //(WITH_ShadowMap == CalcLispPos_PS)
+					const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
+				#endif
+				lightmapColor = min(shadowMapVal.rgb, lightMapVal.rgb)*gFC_DebugPointLightParams.y;
+				lightmapShadow = lightMapVal.a*shadowMapVal.r; //QLOC: store shadowing from shadow map too
+			#else
+				//light map only
+				const float4 lightMapVal = TexLightmap(In.TexLit.xy);
+				lightmapColor = lightMapVal.rgb*gFC_DebugPointLightParams.y;
+				lightmapShadow = lightMapVal.a;
+			#endif
+		#else
+			#ifdef WITH_ShadowMap
+				//shadow map only
+				#if (WITH_ShadowMap == CalcLispPos_VS)
+					const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxLit, In.VecNrm.xyz, In.VecEye).rgb;
+				#else //(WITH_ShadowMap == CalcLispPos_PS)
+					const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
+				#endif
+				lightmapColor = shadowMapVal.rgb;
+			#endif
+		#endif
+	}
+
+	float4 pblTexData = tex2D(gSMP_PBLMap, difTexUV.xy).rgba;
+	float4 pblTexData2 = tex2D(gSMP_PBLMap2, In.TexDifDif.zw).rgba;
+	pblTexData = lerp(pblTexData.rgba, pblTexData2.rgba, In.ColVtx.a);
+
 	MATERIAL Mtl = PackMaterial(sampledColor, pblTexData, In.VecNrm.xyz);
 #ifdef FS_SUBSURF
 	float2 subsurfData = tex2D(gSMP_Subsurf, difTexUV.xy).rg;
@@ -853,56 +914,17 @@
 	float3 emissiveComponent = CalcEmissive(Mtl);
 
 	//image-based lighting
-	float3 envLightComponent = CalcEnvIBL(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90);
+	float3 envLightComponent = CalcEnvIBL(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90) * lightmapColor;
 
-	//directional lights
-	float3 dirSpecular = float3(0.0f, 0.0f, 0.0f);
-	for (uint i = 0; i < clamp(gFC_DirLightCount.x, 0, MAX_DIR_LIGHTS); ++i) {
-		float3 outSpecular;
-		envLightComponent += SunContributionSeparated(Mtl.DiffuseColor, Mtl.SpecularColor, specularF90, Mtl.Roughness, -gFC_DirLightVec[i].xyz, gFC_DirLightCol[i], Mtl.Normal, In.VecEye.xyz, outSpecular);
-		dirSpecular += outSpecular;
-	}
-
-	float lightmapShadow = 1.0f; // used for shadowing static map point lights
-	{//lightmap and shadowmap
-		#ifdef WITH_LightMap
-			#ifdef WITH_ShadowMap
-				//light map + shadow map
-				const float4 lightMapVal = TexLightmap(In.TexLit.xy);
-				#if (WITH_ShadowMap == CalcLispPos_VS)
-					const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxLit, Mtl.Normal, In.VecEye).rgb;
-				#else //(WITH_ShadowMap == CalcLispPos_PS)
-					const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxWld, Mtl.Normal, In.VecEye).rgb;
-				#endif
-				envLightComponent *= min(shadowMapVal.rgb, lightMapVal.rgb)*gFC_DebugPointLightParams.y;
-				
-				lightmapShadow = lightMapVal.a*shadowMapVal.r; //QLOC: store shadowing from shadow map too
-			#else
-				//light map only
-				const float4 lightMapVal = TexLightmap(In.TexLit.xy);
-				envLightComponent *= lightMapVal.rgb*gFC_DebugPointLightParams.y;
-				lightmapShadow = lightMapVal.a;
-			#endif
-		#else
-			#ifdef WITH_ShadowMap
-				//shadow map only
-				#if (WITH_ShadowMap == CalcLispPos_VS)
-					const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxLit, Mtl.Normal, In.VecEye).rgb;
-				#else //(WITH_ShadowMap == CalcLispPos_PS)
-					const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxWld, Mtl.Normal, In.VecEye).rgb;
-				#endif
-				envLightComponent *= shadowMapVal.rgb;
-			#endif
-		#endif
-	}
-	
 	//ambient light
 	envLightComponent += Mtl.DiffuseColor * CalcHemAmbient(Mtl.Normal);
 
 	if (gFC_SAOEnabled != 0.0f) {
-		const float3 aoMapVal = gSMP_AOMap.Load(int3(In.VtxClp.xy, 0)).rrr;
+		const float aoMapVal = tex2Dlod(gSMP_AOMap, float4(In.VtxClp.xy * gFC_SAOParams.xy, 0, 0)).r;
 		envLightComponent *= aoMapVal;
 	}
+
+	Mtl.LitColor.rgb = emissiveComponent + envLightComponent;
 
 #if(POINT_LIGHT_0 >POINT_LIGHT_TYPE_None)
 	float3 pointLightComponent = CalcPointLightsLegacy(Mtl, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapShadow);
@@ -915,12 +937,12 @@
 		const float4 vecPnt = CalcGetGhostLightVec(In.VtxWld.xyz);	//Calculate and obtain the direction and damping coefficient of ghost light
 		const float3 colPnt = gFC_GhostLightCol.rgb * vecPnt.w;	//Attenuate point light source color
 		pointLightComponent += CalcGetGhostLightDifLightCol(Mtl.Normal, vecPnt.xyz, colPnt.rgb);	//Diffuse
-		
+
 		pointLightComponent += CalcGetGhostLightSpcLightCol(Mtl.Normal, gFC_SpcParam, vecPnt.xyz, colPnt.rgb);	//Specular
 		#endif // WITH_GhostMap
 	}
 
-	Mtl.LitColor = float4((envLightComponent + pointLightComponent + emissiveComponent + dirSpecular), sampledColor.a);
+	Mtl.LitColor.rgb += pointLightComponent;
 
 	{//Ghosting
 		#ifdef WITH_GhostMap
@@ -953,6 +975,6 @@
 	SfxOut.Glow = Mtl.LitColor * gFC_GlowColor * min(gFC_ToneCorrectParams.x, 1);
 	return SfxOut;
 #else
-	return PackGBuffer(Mtl);
+	return PackGBuffer(Out, Mtl);
 #endif
 }

@@ -28,8 +28,8 @@
 #ifdef _FRAGMENT_SHADER //X360の場合 VS/PS両方register(cN)を使うんでかぶるとエラーになる. 定義はMake_FS.bat
 	#ifdef _PS3
 		#define FC_REG(reg) reg		//PS3registerなし
-	#else	
-		#define FC_REG(reg) register(reg) 
+	#else
+		#define FC_REG(reg) register(reg)
 	#endif
 #else //VertexShader
 	#define FC_REG(reg) reg
@@ -63,6 +63,8 @@
 	不明
 #endif
 
+
+#ifdef UNMODIFIED
 
 	//環境光源テクスチャ乗算色(切替ブレンド用)
 	#define gFC_EnvDifMapMulCol2 DL_FREG_084
@@ -170,8 +172,8 @@ UNIFORM_FLOAT4 gFC_WaterScreenOffset : FC_REG(c123);////////////////////////////
 
 	#define gFC_ModelMulCol DL_FREG_139
 	UNIFORM_HALF4 gFC_ModelMulCol : FC_REG(c139);	//!<モデル乗算色
-	
-	
+
+
 	#define SHADOWMAP_SLICE_NUM 4
 	//QLOC: use array instead of weights
 	#define gFC_ShadowMapMtxArray DL_FREG_140A
@@ -188,7 +190,7 @@ UNIFORM_FLOAT4 gFC_WaterScreenOffset : FC_REG(c123);////////////////////////////
 	UNIFORM_FLOAT4x4 gFC_ShadowMapMtxArray1 : FC_REG(c144);	//!<
 	UNIFORM_FLOAT4x4 gFC_ShadowMapMtxArray2 : FC_REG(c148);	//!<
 	UNIFORM_FLOAT4x4 gFC_ShadowMapMtxArray3 : FC_REG(c152);	//!<*/
-	
+
 	#define gFC_FgSkinAddColor DL_FREG_156
 	UNIFORM_HALF4 gFC_FgSkinAddColor : FC_REG(c156); //!<FaceGenの肌色に変えるための加算色
 
@@ -206,29 +208,29 @@ UNIFORM_FLOAT4 gFC_WaterScreenOffset : FC_REG(c123);////////////////////////////
 	UNIFORM_FLOAT4 gFC_ShadowMapClamp1 : FC_REG(c158); //!<ShadowMap Clamp
 	UNIFORM_FLOAT4 gFC_ShadowMapClamp2 : FC_REG(c159); //!<ShadowMap Clamp
 	UNIFORM_FLOAT4 gFC_ShadowMapClamp3 : FC_REG(c160); //!<ShadowMap Clamp*/
-	
+
 	//ゴーストパラメータ
 //2010/08/30 nacheon ゴーストテクスチャスクロール削除	#define gFC_GhostTexScrl_0 DL_FREG_161
 //2010/08/30 nacheon ゴーストテクスチャスクロール削除	#define gFC_GhostTexScrl_1 DL_FREG_162
 //2010/08/30 nacheon ゴーストテクスチャスクロール削除	UNIFORM_FLOAT4 gFC_GhostTexScrl_0 : FC_REG(c161);	//!<ゴーストテクスチャスクロール
 //2010/08/30 nacheon ゴーストテクスチャスクロール削除	UNIFORM_FLOAT4 gFC_GhostTexScrl_1 : FC_REG(c162);	//!<ゴーストテクスチャスクロール
-	
+
 	#define gFC_WaterWaveParam DL_FREG_163
 	UNIFORM_FLOAT4 gFC_WaterWaveParam : FC_REG(c163);		//!水面高さ関連パラメータ x: Game描画カメラのFovYのTangent値 y:水面波のFade距離　z:雪面のFade距離　w:HeightMapの横縦中小さい方のサイズ
-	
+
 	#define gFC_WaterHeightMapSize DL_FREG_164
 	UNIFORM_FLOAT4 gFC_WaterHeightMapSize : FC_REG(c164);	//!水面高さマップサイズ xy:heightmapのサイズ　zw:heightmapのサイズの逆数
 
 	#define gFC_WorldViewClipMtx DL_FREG_165
 	UNIFORM_FLOAT4x4 gFC_WorldViewClipMtx : FC_REG(c165);	//!<
 
-	#define gFC_SnowParam DL_FREG_169				
+	#define gFC_SnowParam DL_FREG_169
 	UNIFORM_FLOAT4 gFC_SnowParam: FC_REG(c169);		//雪関連パラメータ x:雪の高さ倍率 y:表面下散乱 z:表面下散乱Power w:Parallax 倍率
 
-	#define gFC_SnowColor DL_FREG_170				
+	#define gFC_SnowColor DL_FREG_170
 	UNIFORM_FLOAT4 gFC_SnowColor: FC_REG(c170);		//雪色
 
-	#define gFC_SnowTileBlend DL_FREG_171				
+	#define gFC_SnowTileBlend DL_FREG_171
 	UNIFORM_FLOAT4 gFC_SnowTileBlend: FC_REG(c171);	//雪タイリングブレンド(x:タイル0ブレンド率、y:タイル1ブレンド率、z:タイル2ブレンド率)
 
 	#define gFC_SnowDetailParam DL_FREG_172
@@ -239,13 +241,13 @@ UNIFORM_FLOAT4 gFC_WaterScreenOffset : FC_REG(c123);////////////////////////////
 
 	#define gFC_FaceEyeCol	DL_FREG_174
 	UNIFORM_FLOAT4 gFC_FaceEyeCol: FC_REG(c174);	  //FaceGen顔の瞳の色
-	
+
 	#define gFC_ShadowLightDir	DL_FREG_175
 	UNIFORM_FLOAT4 gFC_ShadowLightDir: FC_REG(c175);	//シャードウを作る光源の方向
-	
+
 	#define gFC_NormalToAlphaParam DL_FREG_176				//カメラと法線の方向でαが決まるシェーダ用のパラメータ
 	UNIFORM_FLOAT4 gFC_NormalToAlphaParam: FC_REG(c176);	//カメラと法線の方向でαが決まる (x: minAngle, y: 1/(maxAngle-minAngle), 0.f, 0.f)
-	
+
 	#define gFC_SnowParam2 DL_FREG_177				//qloc
 	UNIFORM_FLOAT4 gFC_SnowParam2: FC_REG(c177);	//(x: Roughness, y: MetalMask, z: DiffuseF0)
 
@@ -257,10 +259,10 @@ UNIFORM_FLOAT4 gFC_WaterScreenOffset : FC_REG(c123);////////////////////////////
 
 	#define gFC_GhostLightCol DL_FREG_181
 	UNIFORM_FLOAT4 gFC_GhostLightCol: FC_REG(c181);	//光源色(rgb:色, a:減衰終了距離)
-	
+
 	#define gFC_DetailBumpParam DL_FREG_182
 	UNIFORM_FLOAT4 gFC_DetailBumpParam: FC_REG(c182);	//DetailBumpParam(xy: UVScale, z:BumpPower)
-	
+
 	#define gFC_LightProbeParam DL_FREG_184
 	UNIFORM_FLOAT4 gFC_LightProbeParam: FC_REG(c184);
 
@@ -316,7 +318,7 @@ UNIFORM_FLOAT4 gFC_WaterScreenOffset : FC_REG(c123);////////////////////////////
 
 	#define gFC_ClusterParam DL_FREG_204
 	UNIFORM_FLOAT4 gFC_ClusterParam : FC_REG(c204);
-	
+
 	#define gFC_ToneCorrectParams DL_FREG_205
 	UNIFORM_FLOAT4 gFC_ToneCorrectParams : FC_REG(c205);
 
@@ -329,5 +331,96 @@ UNIFORM_FLOAT4 gFC_WaterScreenOffset : FC_REG(c123);////////////////////////////
 	#define gFC_PostEffectScale DL_FREG_208
 	UNIFORM_FLOAT4 gFC_PostEffectScale : FC_REG(c208);
 	//~qloc
+
+#else //UNMODIFIED
+
+	float4 gFC_EnvDifMapMulCol2 : FC_REG(c1);
+	float4 gFC_EnvSpcMapMulCol2 : FC_REG(c2);
+	float4 gFC_EnvDifMapMulCol : FC_REG(c3);
+	float4 gFC_EnvSpcMapMulCol : FC_REG(c4);
+	float4 gFC_SpcLightVec : FC_REG(c5);
+	float4 gFC_SpcLightCol : FC_REG(c6);
+	float4 gFC_HemAmbCol_u : FC_REG(c7);
+	float4 gFC_HemAmbCol_d : FC_REG(c8);
+	float4 gFC_DifMapMulCol : FC_REG(c9);
+	float4 gFC_SpcMapMulCol : FC_REG(c10);
+	float4 gFC_SpcParam : FC_REG(c11);
+	float4 gFC_FogCol : FC_REG(c12);
+	float4 gFC_LsBeta1PlusBeta2 : FC_REG(c13);
+	float4 gFC_LsTerrainReflectance : FC_REG(c14);
+	float4 gFC_LsOneOverBeta1PlusBeta2 : FC_REG(c15);
+	float4 gFC_LsHGg : FC_REG(c16);
+	float4 gFC_LsBetaDash1 : FC_REG(c17);
+	float4 gFC_LsBetaDash2 : FC_REG(c18);
+	float4 gFC_LsSunColor : FC_REG(c19);
+	float4 gFC_LsLightDir : FC_REG(c20);
+	float4 gFC_ShadowMapParam : FC_REG(c21);
+	float4 gFC_ShadowColor : FC_REG(c22);
+	float4 gFC_ShadowStartDist : FC_REG(c23);
+	float gFC_WaterReflectBand : FC_REG(c24);
+	float gFC_WaterRefractBand : FC_REG(c25);
+	float gFC_WaterWaveHeight : FC_REG(c26);
+	float4 gFC_WaterColor : FC_REG(c27);
+	float2 gFC_WaterFadeBegin : FC_REG(c28);
+	float gFC_WaterFresnelPow : FC_REG(c29);
+	float gFC_WaterFresnelBias : FC_REG(c30);
+	float gFC_WaterFresnelScale : FC_REG(c31);
+	float4 gFC_WaterFresnelColor : FC_REG(c32);
+	float4 gFC_WaterFresnelFakeColor : FC_REG(c33);
+	float3 gFC_WaterTileBlend : FC_REG(c34);
+	float4 gFC_ToneMap : FC_REG(c35);
+	float4 gFC_GhostEdgeColor : FC_REG(c36);
+	float4 gFC_GhostTexColor : FC_REG(c37);
+	float4 gFC_GhostParam : FC_REG(c38);
+	float4 gFC_ModelMulCol : FC_REG(c39);
+#define gFC_ShadowMapMtxArray0 gFC_ShadowMapMtxArray[0]
+#define gFC_ShadowMapMtxArray1 gFC_ShadowMapMtxArray[1]
+#define gFC_ShadowMapMtxArray2 gFC_ShadowMapMtxArray[2]
+#define gFC_ShadowMapMtxArray3 gFC_ShadowMapMtxArray[3]
+	float4x4 gFC_ShadowMapMtxArray[4] : FC_REG(c40);
+#define gFC_ShadowMapClamp0 gFC_ShadowMapClamp[0]
+#define gFC_ShadowMapClamp1 gFC_ShadowMapClamp[1]
+#define gFC_ShadowMapClamp2 gFC_ShadowMapClamp[2]
+#define gFC_ShadowMapClamp3 gFC_ShadowMapClamp[3]
+	float4 gFC_ShadowMapClamp[4] : FC_REG(c56);
+	float4 gFC_FgSkinAddColor : FC_REG(c60);
+	float4 gFC_WaterWaveParam : FC_REG(c61);
+	float4 gFC_WaterHeightMapSize : FC_REG(c62);
+	float4x4 gFC_WorldViewClipMtx : FC_REG(c63);
+	float4 gFC_SnowParam : FC_REG(c67);
+	float4 gFC_SnowColor : FC_REG(c68);
+	float4 gFC_SnowTileBlend : FC_REG(c69);
+	float4 gFC_SnowDetailParam : FC_REG(c70);
+	float4 gFC_SnowSpecParam : FC_REG(c71);
+	float4 gFC_FaceEyeCol : FC_REG(c72);
+	float4 gFC_ShadowLightDir : FC_REG(c73);
+	float4 gFC_NormalToAlphaParam : FC_REG(c74);
+	float4 gFC_SnowParam2 : FC_REG(c75);
+	float4 gFC_GhostLightPos : FC_REG(c76);
+	float4 gFC_GhostLightCol : FC_REG(c77);
+	float4 gFC_DetailBumpParam : FC_REG(c78);
+#define gFC_NormalScale gFC_LightProbeParam.z
+	float4 gFC_LightProbeParam : FC_REG(c79);
+	float4 gFC_SubsurfaceParam : FC_REG(c80);
+	uint4 gFC_PntLightCount : FC_REG(c81);
+	float4 gFC_ParallaxParams : FC_REG(c82);
+	float4 gFC_GlowColor : FC_REG(c83);
+	float4 gFC_SfxLightScatteringParams : FC_REG(c84);
+	uint4 gFC_MaterialWorkflow : FC_REG(c85);
+	float4 gFC_ClipInfo : FC_REG(c86);
+	float4 gFC_ClusterParam : FC_REG(c87);
+	float4 gFC_ToneCorrectParams : FC_REG(c88);
+	float4 gFC_AdaptParam : FC_REG(c89);
+#define gFC_SAOEnabled gFC_SAOParams.w
+	float4 gFC_SAOParams : FC_REG(c90);
+	float4 gFC_InverseToneMapEnable : FC_REG(c91);
+	float4 gFC_PntLightPos[4] : FC_REG(c92);
+	float4 gFC_PntLightCol[4] : FC_REG(c96);
+#define gFC_DebugMaterialParams gFC_MaterialOverrideParams
+	float4 gFC_MaterialOverrideParams : FC_REG(c100);
+	float4 gFC_DebugPointLightParams : FC_REG(c101);
+	uint4 gFC_DebugDraw : FC_REG(c102);
+
+#endif //UNMODIFIED
 
 #endif //___FRPG_Flver_FRPG_Common_FC_fxh___

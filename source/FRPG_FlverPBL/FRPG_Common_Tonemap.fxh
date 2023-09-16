@@ -1,3 +1,5 @@
+#ifdef UNMODIFIED
+
 float3 U2Func(float3 x)
 {
 	float ShoulderStrength = gFC_fMiddleGray.x; //0.15f;
@@ -55,7 +57,7 @@ float3 ReverseToneMap(float3 linearCol)
 	{
 		float3 LinearWhite = float3(gFC_AdaptParam.y, gFC_AdaptParam.y, gFC_AdaptParam.y);
 		float3 denominator = U2Func(LinearWhite);
-	
+
 		float3 tmp = saturate(linearCol)*denominator;
 		float3 rev = float3(ReverseU2(tmp.x), ReverseU2(tmp.y), ReverseU2(tmp.z));
 
@@ -70,3 +72,25 @@ float3 ReverseToneMap(float3 linearCol)
 		return linearCol;
 	}
 }
+
+#else //UNMODIFIED
+
+float3 ReverseToneMap(float3 linearCol)
+{
+	if (gFC_InverseToneMapEnable.x)
+	{
+		float3 LinearWhite = float3(gFC_AdaptParam.y, gFC_AdaptParam.y, gFC_AdaptParam.y);
+		float3 rev = linearCol * LinearWhite;
+
+		float middleGray = gFC_AdaptParam.x;
+		float expScale = tex2D(gSMP_LumTex, float2(0.5f, 0.5f)).r;
+		expScale = clamp(expScale, gFC_AdaptParam.z, gFC_AdaptParam.w);
+		return rev * (expScale + 0.0001) / middleGray;
+	}
+	else
+	{
+		return linearCol;
+	}
+}
+
+#endif //UNMODIFIED
