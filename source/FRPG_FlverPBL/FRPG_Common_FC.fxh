@@ -64,7 +64,7 @@
 #endif
 
 
-#ifdef UNMODIFIED
+#ifdef OLD_VERSION
 
 	//環境光源テクスチャ乗算色(切替ブレンド用)
 	#define gFC_EnvDifMapMulCol2 DL_FREG_084
@@ -332,7 +332,7 @@ UNIFORM_FLOAT4 gFC_WaterScreenOffset : FC_REG(c123);////////////////////////////
 	UNIFORM_FLOAT4 gFC_PostEffectScale : FC_REG(c208);
 	//~qloc
 
-#else //UNMODIFIED
+#else //OLD_VERSION
 
 	float4 gFC_EnvDifMapMulCol2 : FC_REG(c1);
 	float4 gFC_EnvSpcMapMulCol2 : FC_REG(c2);
@@ -421,6 +421,6 @@ UNIFORM_FLOAT4 gFC_WaterScreenOffset : FC_REG(c123);////////////////////////////
 	float4 gFC_DebugPointLightParams : FC_REG(c101);
 	uint4 gFC_DebugDraw : FC_REG(c102);
 
-#endif //UNMODIFIED
+#endif //OLD_VERSION
 
 #endif //___FRPG_Flver_FRPG_Common_FC_fxh___

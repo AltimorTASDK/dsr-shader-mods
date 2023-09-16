@@ -128,11 +128,7 @@
 	struct GBUFFER_OUT
 	{
 		float4 GBuffer0 : SV_Target0;
-#ifdef UNMODIFIED
-		float GBuffer1 : SV_Target1; //qloc: subsurface scattering strength. We don't seem to ever modify it so it might be a good idea to move it to the stencil
-#else
 		float4 GBuffer1 : SV_Target1; //qloc: subsurface scattering strength. We don't seem to ever modify it so it might be a good idea to move it to the stencil
-#endif
 	};
 	//!フラグメントシェーダ出力
 	struct FRAGMENT_OUT
@@ -875,7 +871,7 @@ CalcGetLightScatteringCol(float4 inCol, float4 eyeVec)
 
 
 
-#ifdef UNMODIFIED
+#ifdef OLD_VERSION
 
 //VSLS
 /*-------------------------------------------------------------------*//*!
@@ -973,7 +969,7 @@ CalcGetLightScatteringAddFactor(float4 scatCol)
 
 
 
-#endif // UNMODIFIED
+#endif // OLD_VERSION
 
 
 

@@ -236,7 +236,7 @@ float3 PointLightContribution(float3 N, float3 L, float3 V,
 	// Cf https://seblagarde.wordpress.com/2012/01/08/pi-or-not-to-pi-in-game-lighting-equation/
 
 	float lampAtt;
-#ifdef UNMODIFIED
+#ifdef OLD_VERSION
 	switch (falloffMode)
 	{
 	default:
@@ -252,7 +252,7 @@ float3 PointLightContribution(float3 N, float3 L, float3 V,
 	case LAMP_FALLOFF_PERCEIVED_LINEAR:
 #endif
 		lampAtt = perceivedLinear(LampDist, LampFalloffEnd, OneOverFalloffEndMinusStart);
-#ifdef UNMODIFIED
+#ifdef OLD_VERSION
 		break;
 	case LAMP_FALLOFF_FIXED_LINEAR:
 		lampAtt = linearAttenuation(LampDist, LampFalloffEnd, OneOverFalloffEndMinusStart);
@@ -263,7 +263,7 @@ float3 PointLightContribution(float3 N, float3 L, float3 V,
 	return  saturate(dot(N, L)) * ((diffContrib + specContrib)	* LampColor * lampAtt * M_PI);
 }
 
-#ifdef UNMODIFIED
+#ifdef OLD_VERSION
 
 #define SUN_RADIUS 0.5f * M_PI/180.0f
 
@@ -315,7 +315,7 @@ float3 SunContributionSeparated(float3 diffColor, float3 specColor, float specF9
 	return diffContrib;
 }
 
-#endif //UNMODIFIED
+#endif //OLD_VERSION
 
 //--------------------------------------------------------------------------------------
 // Light probe

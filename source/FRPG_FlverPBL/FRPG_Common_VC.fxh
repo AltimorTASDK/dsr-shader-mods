@@ -30,7 +30,7 @@
 	#define VC_REG(reg) register(reg)
 #endif
 
-#ifdef UNMODIFIED
+#ifdef OLD_VERSION
 
 	#define gVC_WorldViewClipMtx VR_000
 	#define gVC_CameraMtx VR_004
@@ -224,7 +224,7 @@
 
 
 
-#else //UNMODIFIED
+#else //OLD_VERSION
 
 	float4x4 gVC_WorldViewClipMtx : VC_REG(c0);
 	float4 gVC_CameraPos : VC_REG(c4);
@@ -245,7 +245,7 @@
 	row_major float3x4 gVC_LocalWorldMtxArray[38] : VC_REG(c28);
 	row_major float3x4 gVC_prevLocalWorldMtxArray[38] : VC_REG(c142);
 
-#endif //UNMODIFIED
+#endif //OLD_VERSION
 
 
 #ifdef _PS3
