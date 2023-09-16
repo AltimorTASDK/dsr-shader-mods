@@ -864,10 +864,10 @@ CalcGetLightScatteringCol(float4 inCol, float4 eyeVec)
 	//係数
 	inscattering *= gFC_LsTerrainReflectance.w;	//※gFC_LsTerrainReflectance.wはインスキャッタリング倍率
 
-    //スキャッタリング後の色
-    float3 scatCol = inCol.rgb*totalExtinction + gFC_LsSunColor.rgb*inscattering;
+	//スキャッタリング後の色
+	float3 scatCol = inCol.rgb*totalExtinction + gFC_LsSunColor.rgb*inscattering;
 
-    //ブレンド
+	//ブレンド
 	float3 outcol = float3(lerp(inCol.rgb, scatCol, gFC_LsSunColor.a));
 	return float4(outcol, inCol.a);	//※gFC_LsSunColor.aはブレンド率
 }
