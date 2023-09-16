@@ -62,7 +62,7 @@ $(FLVER_OUT)/FRPG_Phn_%_HemEnv.fpo: $(SOURCES)
 $(FLVER_OUT)/FRPG_Phn_%_HemEnvLerp.fpo: $(FLVER_OUT)/FRPG_Phn_%_HemEnv.fpo
 	cp "$<" "$@"
 
-$(FLVER_OUT)/FRPG_Phn_%_HemEnvSubsurf.fpo: $(FLVER_OUT)/FRPG_Phn_%_HemEnv.fpo
+$(FLVER_OUT)/FRPG_Phn_%_HemEnvSubsurf.fpo: $(SOURCES)
 	@fxc $(SRC_DIR)/FRPG_FS_PHN.fx "//Fo$(subst /,\\,$@)" $(FXCFLAGS) //DFS_SUBSURF //EFragmentMain_$*
 
 $(FLVER_OUT)/FRPG_Phn_%_HemEnvLerpSubsurf.fpo: $(FLVER_OUT)/FRPG_Phn_%_HemEnvSubsurf.fpo
