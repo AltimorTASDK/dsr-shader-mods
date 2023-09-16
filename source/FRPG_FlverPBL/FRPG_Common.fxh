@@ -922,7 +922,7 @@ CalcGetLightScatteringCol_InScatColor(float4 eyeVec, float3 extinction)
 	//係数
 	inscattering *= gVC_LsTerrainReflectance.w;	//※gVC_LsTerrainReflectance.wはインスキャッタリング倍率
 
-    //スキャッタリング後の色
+	//スキャッタリング後の色
 	float4 scatCol;
 	scatCol.rgb = gVC_LsSunColor.rgb*inscattering;
 	scatCol.a = gVC_LsSunColor.a;
