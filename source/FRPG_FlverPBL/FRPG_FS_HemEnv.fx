@@ -27,8 +27,6 @@
 
 #include "FRPG_Common.fxh"
 
-
-
 /*-------------------------------------------------------------------*//*!
 @brief フラグメントシェーダ
 
@@ -42,44 +40,42 @@
 
 //#define dbgShadow
 
+#if defined(WITH_MultiTexture) && !defined(WITH_SpecularMap)
 
 /*-------------------------------------------------------------------*//*!
 @brief フラグメントシェーダ
 @par ディフューズ
 */
-#ifdef WITH_Glow
-	PS_OUT_SFX
-#else
-	GBUFFER_OUT
-#endif
-FragmentMain(VTX_OUT In)
+GBUFFER_OUT FragmentMain(VTX_OUT In)
 {
-#ifndef WITH_GLOW
-	GBUFFER_OUT Out;
-#endif
-
-#if defined(WITH_MultiTexture) && !defined(WITH_SpecularMap)
 	MATERIAL Mtl;
 
 	Mtl.LitColor = float4(1.0f, 0.f, 1.f, 1.f);
 	Mtl.DiffuseColor = float3(0.f, 0.f, 0.f);
 	Mtl.SpecularColor = float3(0.f, 0.f, 0.f);
+	Mtl.EmissiveColor = float3(0.f, 0.f, 0.f);
 	Mtl.Normal = float3(0.f, 0.f, 0.f);
 	Mtl.Roughness = 1.0f;
 	Mtl.SubsurfStrength = 0.0f;
 	Mtl.SubsurfOpacity = 1.0f;
 
-#ifdef WITH_Glow
-	PS_OUT_SFX SfxOut;
-	SfxOut.Color = float4(ReverseToneMap(Mtl.LitColor.rgb * gFC_ToneCorrectParams.x), Mtl.LitColor.a);
-	SfxOut.Glow = Mtl.LitColor * gFC_GlowColor * min(gFC_ToneCorrectParams.x, 1);
-	return SfxOut;
-#else
+	GBUFFER_OUT Out;
 	Out.GBuffer0.a = 1.0f;
-	return PackGBuffer(Out, Mtl);
+#ifdef WITH_Glow
+	Mtl.LitColor.rgb = ReverseToneMap(Mtl.LitColor.rgb * gFC_ToneCorrectParams.x);
 #endif
+	return PackGBuffer(Out, Mtl);
+}
 
 #else //defined(WITH_MultiTexture) && !defined(WITH_SpecularMap)
+
+/*-------------------------------------------------------------------*//*!
+@brief フラグメントシェーダ
+@par ディフューズ
+*/
+GBUFFER_OUT FragmentMain(VTX_OUT In)
+{
+	GBUFFER_OUT Out;
 
 #if defined(WITH_MultiTexture)
 	float4 difTexUV = In.TexDifDif;
@@ -110,7 +106,11 @@ FragmentMain(VTX_OUT In)
 #else //WITH_MultiTexture
 	float4 sampledColor = TexDiff(difTexUV);
 	sampledColor.rgb += gFC_FgSkinAddColor.rgb;
+#ifdef WITH_Glow
+	sampledColor *= In.ColVtx;
+#else
 	sampledColor *= In.ColVtx * gFC_ModelMulCol;
+#endif
 	sampledColor = qlocDoAlphaTest(sampledColor);
 #endif //WITH_MultiTexture
 
@@ -146,16 +146,15 @@ FragmentMain(VTX_OUT In)
 		#endif
 	}
 
-#ifdef WITH_MultiTexture
-	const float2 lightmapUV = In.TexLit.xy;
-#else
-	const float2 lightmapUV = In.TexDifLit.zw;
-#endif
-
 	float lightmapShadow = 1.0f; // used for shadowing static map point lights
 	float3 lightmapColor = 1.0f;
 	{//lightmap and shadowmap
 	#ifdef WITH_LightMap
+		#ifdef WITH_MultiTexture
+			const float2 lightmapUV = In.TexLit.xy;
+		#else
+			const float2 lightmapUV = In.TexDifLit.zw;
+		#endif
 		#ifdef WITH_ShadowMap
 			//light map + shadow map
 			const float4 lightMapVal = TexLightmap(lightmapUV);
@@ -261,23 +260,14 @@ FragmentMain(VTX_OUT In)
 	//PS light scattering
 	float4 scatteredColor = CalcGetLightScatteringCol(Mtl.LitColor, In.VecEye); //light scattering is in sRGB as well
 #endif
-#ifdef WITH_Glow
-	Mtl.LitColor = lerp(Mtl.LitColor, scatteredColor, gFC_SfxLightScatteringParams.x);
-#else
 	Mtl.LitColor = scatteredColor;
-#endif
 	Mtl.LitColor = Srgb2linear(Mtl.LitColor); //convert back to linear
 
 
 #ifdef WITH_Glow
-	PS_OUT_SFX SfxOut;
-	SfxOut.Color = float4(ReverseToneMap(Mtl.LitColor.rgb * gFC_ToneCorrectParams.x), Mtl.LitColor.a);
-	//SfxOut.Color = float4(ReverseToneMap(Mtl.LitColor.rgb * gFC_ToneCorrectParams.x), 0.f);
-	SfxOut.Glow = Mtl.LitColor * gFC_GlowColor * min(gFC_ToneCorrectParams.x, 1);
-	return SfxOut;
-#else
-	return PackGBuffer(Out, Mtl);
+	Mtl.LitColor.rgb = ReverseToneMap(Mtl.LitColor.rgb * gFC_ToneCorrectParams.x);
 #endif
+	return PackGBuffer(Out, Mtl);
+}
 
 #endif //defined(WITH_MultiTexture) && !defined(WITH_SpecularMap)
-}

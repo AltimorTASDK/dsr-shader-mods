@@ -28,11 +28,7 @@
 #define DFG_TEXTURE_SIZE 128.0f
 
 #define gFC_DifMapMultiplier gFC_LightProbeParam.x
-#ifdef UNMODIFIED
-#define gFC_SpcMapMultiplier gFC_LightProbeParam.y
-#else
 #define gFC_SpcMapMultiplier gFC_LightProbeParam.x
-#endif
 #define gFC_LightProbeMipCount gFC_LightProbeParam.w
 #define gFC_LightProbeSlot gFC_LightProbeParam.z
 #define gSMP_LightProbeDif gSMP_EnvDifMap
@@ -401,12 +397,10 @@ float3 CalcSH(float3 N, float4 worldPos)
 
 float3 CalcDiffuseLD(float3 dominantN)
 {
-#ifdef UNMODIFIED
-#ifndef USE_SH
-	return gFC_EnvDifMapMulCol.rgb * (gFC_DifMapMultiplier *texCUBElod(gSMP_LightProbeDif, float4(dominantN, 0.0f)).rgb + gFC_MagicLightParam.x * texCUBElod(gSMP_EnvDifMap2, float4(dominantN, 0.0f)).rgb);
-#else
-	return gFC_MagicLightParam.x * gFC_DifMapMultiplier * gFC_EnvDifMapMulCol.rgb * texCUBElod(gSMP_LightProbeDif, float4(dominantN, 0.0f)).rgb;
-#endif
+#ifdef WITH_EnvLerp
+	float3 spec1 = gFC_EnvDifMapMulCol.rgb * texCUBElod(gSMP_EnvDifMap, float4(dominantN, 0.0f)).rgb;
+	float3 spec2 = gFC_EnvDifMapMulCol2.rgb * texCUBElod(gSMP_EnvDifMap2, float4(dominantN, 0.0f)).rgb;
+	return gFC_DifMapMultiplier * lerp(spec1, spec2, gFC_EnvDifMapMulCol2.a);
 #else
 	return gFC_EnvDifMapMulCol.rgb * gFC_DifMapMultiplier * texCUBElod(gSMP_LightProbeDif, float4(dominantN, 0.0f)).rgb;
 #endif
@@ -416,8 +410,10 @@ float3 CalcSpecularLD(float3 dominantR, float roughness)
 {
 	float mipLevel = linearRoughnessToMipLevel(roughness, gFC_LightProbeMipCount);
 	//add directional light
-#ifdef UNMODIFIED
-	return gFC_EnvSpcMapMulCol.rgb * (gFC_SpcMapMultiplier * texCUBElod(gSMP_LightProbeSpec, float4(dominantR, mipLevel)).rgb + gFC_MagicLightParam.y * texCUBElod(gSMP_EnvSpcMap2, float4(dominantR, mipLevel)).rgb);
+#ifdef WITH_EnvLerp
+	float3 spec1 = gFC_EnvSpcMapMulCol.rgb * texCUBElod(gSMP_EnvSpcMap, float4(dominantR, mipLevel)).rgb;
+	float3 spec2 = gFC_EnvSpcMapMulCol2.rgb * texCUBElod(gSMP_EnvSpcMap2, float4(dominantR, mipLevel)).rgb;
+	return gFC_SpcMapMultiplier * lerp(spec1, spec2, gFC_EnvSpcMapMulCol2.a);
 #else
 	return gFC_EnvSpcMapMulCol.rgb * gFC_SpcMapMultiplier * texCUBElod(gSMP_LightProbeSpec, float4(dominantR, mipLevel)).rgb;
 #endif
@@ -559,10 +555,18 @@ float3 CalcPointLightsClustered(MATERIAL Mtl, float3 V, float3 worldPos, float s
 	//clustered
 	uint3 clusterCoords = GetClusterCoords(worldPos);
 	uint offsetNum = numLightsBuffer[(clusterCoords.z * CLUSTER_COUNT_Y + clusterCoords.y) * CLUSTER_COUNT_X + clusterCoords.x].offsetNum;
+#ifdef WITH_PntS
+	uint lightNum = min((offsetNum >> 6) & 0x3f, gFC_PntLightCount.x);
+#else
 	uint lightNum = min(offsetNum & 0x3f, gFC_PntLightCount.x);
+#endif
 	uint offset = offsetNum >> 12;
 	for (uint i = offset; i < offset + lightNum; ++i) {
+#ifdef WITH_PntS
+		uint lightID = (lightIDBuffer[i].id >> 9) & 0x1ff;
+#else
 		uint lightID = lightIDBuffer[i].id & 0x1ff;
+#endif
 		float4 lightPosition = lightParamBuffer[lightID].position;
 		float4 lightColor = lightParamBuffer[lightID].color;
 		float attenuation = lightParamBuffer[lightID].attenuation;

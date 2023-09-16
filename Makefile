@@ -17,14 +17,19 @@ VARIANTS := $(foreach Spc,___ Spc, \
             $(foreach Sdw,___ Sdw Csd, \
             Dif$(Spc)$(Bmp)$(Mul)$(Lit)$(Sdw))))))
 
-SFX_VARIANTS := $(VARIANTS) \
-                $(patsubst %,%_HemEnv,$(VARIANTS)) \
-                $(patsubst %,%_HemEnvLerp,$(VARIANTS))
+SFX_VARIANTS := $(patsubst %,%_HemEnv,$(VARIANTS)) \
+                $(patsubst %,%_HemEnvLerp,$(VARIANTS)) \
+                $(patsubst %,%_HemEnvLerpPntS,$(VARIANTS)) \
+                $(patsubst %,%_HemEnvPntS,$(VARIANTS))
 
 PHN_VARIANTS := $(patsubst %,%_HemEnv,$(VARIANTS)) \
                 $(patsubst %,%_HemEnvLerp,$(VARIANTS)) \
-                $(patsubst %,%_HemEnvSubsurf,$(VARIANTS)) \
-                $(patsubst %,%_HemEnvLerpSubsurf,$(VARIANTS))
+                $(patsubst %,%_HemEnvLerpParallax,$(VARIANTS)) \
+                $(patsubst %,%_HemEnvLerpPntS,$(VARIANTS)) \
+                $(patsubst %,%_HemEnvLerpSubsurf,$(VARIANTS)) \
+                $(patsubst %,%_HemEnvParallax,$(VARIANTS)) \
+                $(patsubst %,%_HemEnvPntS,$(VARIANTS)) \
+                $(patsubst %,%_HemEnvSubsurf,$(VARIANTS))
 
 TARGET_NAMES := $(patsubst %,FRPG_Sfx_%.fpo,$(SFX_VARIANTS)) \
                 $(patsubst %,FRPG_Phn_%.fpo,$(PHN_VARIANTS))
@@ -53,7 +58,7 @@ $(FLVER_OUT):
 	@Yabber $(FLVER_DCX)
 
 $(FLVER_OUT)/FRPG_%.fpo: $(SOURCES)
-	fxc $(SRC_DIR)/FRPG_FS_HemEnv.fx "//Fo$(subst /,\\,$@)" $(FXCFLAGS) //EFragmentMain
+	@fxc $(SRC_DIR)/FRPG_FS_HemEnv.fx "//Fo$(subst /,\\,$@)" $(FXCFLAGS) //EFragmentMain
 
 add_variant = $(foreach name,$(TARGET_NAMES), \
 	$(if $(findstring $(strip $1),$(name)),$(FLVER_OUT)/$(name),)): DEFINES += //D$(strip $2)
@@ -65,17 +70,9 @@ $(call add_variant, Lit, WITH_LightMap)
 $(call add_variant, Sdw, WITH_ShadowMap=1)
 $(call add_variant, Csd, WITH_ShadowMap=2)
 
-# Sfx
+$(call add_variant, Lerp,     WITH_EnvLerp)
+$(call add_variant, Parallax, WITH_Parallax)
+$(call add_variant, PntS,     WITH_PntS)
+$(call add_variant, Subsurf,  FS_SUBSURF)
+
 $(FLVER_OUT)/FRPG_Sfx_%.fpo: DEFINES += //DWITH_Glow
-
-$(FLVER_OUT)/FRPG_Sfx_%_HemEnvLerp.fpo: $(FLVER_OUT)/FRPG_Sfx_%_HemEnv.fpo
-	cp "$<" "$@"
-
-# Phn
-$(FLVER_OUT)/FRPG_Phn_%_HemEnvSubsurf.fpo: DEFINES += //DFS_SUBSURF
-
-$(FLVER_OUT)/FRPG_Phn_%_HemEnvLerp.fpo: $(FLVER_OUT)/FRPG_Phn_%_HemEnv.fpo
-	cp "$<" "$@"
-
-$(FLVER_OUT)/FRPG_Phn_%_HemEnvLerpSubsurf.fpo: $(FLVER_OUT)/FRPG_Phn_%_HemEnvSubsurf.fpo
-	cp "$<" "$@"
