@@ -51,13 +51,13 @@ test: all
 	@echo "Launching Dark Souls Remastered"
 	@$(STEAM) -applaunch $(APPID)
 
-$(FLVER_DCX): $(FLVER_OUT) $(TARGETS)
+$(FLVER_DCX): $(TARGETS)
 	@Yabber $(FLVER_OUT)
 
 $(FLVER_OUT):
 	@Yabber $(FLVER_DCX)
 
-$(FLVER_OUT)/FRPG_%.fpo: $(SOURCES)
+$(FLVER_OUT)/FRPG_%.fpo: $(SOURCES) $(FLVER_OUT)
 	@fxc $(SRC_DIR)/FRPG_FS_HemEnv.fx "//Fo$(subst /,\\,$@)" $(FXCFLAGS) //EFragmentMain
 
 add_variant = $(foreach name,$(TARGET_NAMES), \
