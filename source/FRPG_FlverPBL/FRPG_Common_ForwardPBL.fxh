@@ -398,9 +398,9 @@ float3 CalcSH(float3 N, float4 worldPos)
 float3 CalcDiffuseLD(float3 dominantN)
 {
 #ifdef WITH_EnvLerp
-	float3 spec1 = gFC_EnvDifMapMulCol.rgb * texCUBElod(gSMP_EnvDifMap, float4(dominantN, 0.0f)).rgb;
-	float3 spec2 = gFC_EnvDifMapMulCol2.rgb * texCUBElod(gSMP_EnvDifMap2, float4(dominantN, 0.0f)).rgb;
-	return gFC_DifMapMultiplier * lerp(spec1, spec2, gFC_EnvDifMapMulCol2.a);
+	float3 dif1 = gFC_EnvDifMapMulCol.rgb * texCUBElod(gSMP_EnvDifMap, float4(dominantN, 0.0f)).rgb;
+	float3 dif2 = gFC_EnvDifMapMulCol2.rgb * texCUBElod(gSMP_EnvDifMap2, float4(dominantN, 0.0f)).rgb;
+	return gFC_DifMapMultiplier * lerp(dif1, dif2, gFC_EnvDifMapMulCol2.a);
 #else
 	return gFC_EnvDifMapMulCol.rgb * gFC_DifMapMultiplier * texCUBElod(gSMP_LightProbeDif, float4(dominantN, 0.0f)).rgb;
 #endif
