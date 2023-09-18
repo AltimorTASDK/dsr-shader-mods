@@ -38,6 +38,8 @@
 #define CLUSTER_COUNT_Y 8
 #define CLUSTER_COUNT_Z 24
 
+#define AMBIENT_MULTIPLIER 0.5
+
 struct s_numLights {
 	uint offsetNum;
 };
@@ -263,60 +265,6 @@ float3 PointLightContribution(float3 N, float3 L, float3 V,
 	return  saturate(dot(N, L)) * ((diffContrib + specContrib)	* LampColor * lampAtt * M_PI);
 }
 
-#ifdef OLD_VERSION
-
-#define SUN_RADIUS 0.5f * M_PI/180.0f
-
-float3 SunContribution(float3 diffColor, float3 specColor, float specF90,
-	float roughness, float3 sunDirection, float4 sunColor, float3 N, float3 V)
-{
-	//prevent very bright directional reflections
-	roughness = max(roughness, 0.08);
-
-	const float r = sin(SUN_RADIUS);
-	const float d = cos(SUN_RADIUS);
-
-	float3 R = 2 * dot(V, N) * N - V;
-
-	float DdotR = dot(sunDirection, R);
-	float3 S = R - DdotR * sunDirection;
-	float3 L = DdotR < d ? normalize(d * sunDirection + normalize(S) * r) : R;
-
-	float illuminance = /*sunColor.a * 2.55f * */saturate(dot(N, sunDirection));
-
-	float3 diffContrib = diffColor * M_INV_PI * gFC_DirLightParam.x;
-	float3 specContrib = microfacets_brdf(N, L, V, specColor, specF90, roughness) * gFC_DirLightParam.y;
-
-	//illuminance already contains NdotL
-	return illuminance * ((diffContrib + specContrib) * sunColor.rgb * M_PI);
-}
-
-float3 SunContributionSeparated(float3 diffColor, float3 specColor, float specF90,
-	float roughness, float3 sunDirection, float4 sunColor, float3 N, float3 V, out float3 specContrib)
-{
-	//prevent very bright directional reflections
-	roughness = max(roughness, 0.08);
-
-	const float r = sin(SUN_RADIUS);
-	const float d = cos(SUN_RADIUS);
-
-	float3 R = 2 * dot(V, N) * N - V;
-
-	float DdotR = dot(sunDirection, R);
-	float3 S = R - DdotR * sunDirection;
-	float3 L = DdotR < d ? normalize(d * sunDirection + normalize(S) * r) : R;
-
-	float3 illuminance = /*sunColor.a * 2.55f * */saturate(dot(N, sunDirection)) * sunColor.rgb;
-
-	//illuminance already contains NdotL
-	float3 diffContrib = illuminance * diffColor * gFC_DirLightParam.x;
-	specContrib = illuminance * microfacets_brdf(N, L, V, specColor, specF90, roughness) * M_PI * gFC_DirLightParam.y;
-
-	return diffContrib;
-}
-
-#endif //OLD_VERSION
-
 //--------------------------------------------------------------------------------------
 // Light probe
 //--------------------------------------------------------------------------------------
@@ -417,12 +365,6 @@ float3 CalcSpecularLD(float3 dominantR, float roughness)
 #else
 	return gFC_EnvSpcMapMulCol.rgb * gFC_SpcMapMultiplier * texCUBElod(gSMP_LightProbeSpec, float4(dominantR, mipLevel)).rgb;
 #endif
-}
-
-float3 CalcHemAmbient(float3 dominantN)
-{
-	float HemLerpRate = dominantN.y * 0.5f + 0.5f;
-	return lerp(gFC_HemAmbCol_d.xyz, gFC_HemAmbCol_u.xyz, HemLerpRate);
 }
 
 // Approximates luminance from an RGB value
@@ -607,22 +549,34 @@ float3 CalcEmissive(MATERIAL Mtl)
 	return emissiveComponent;
 }
 
-float3 CalcEnvIBL(MATERIAL Mtl, float3 vertexNormal, float3 V, float3 worldPos, float specularF90)
+float3 CalcEnvDirLight(MATERIAL Mtl, float3 vertexNormal, float3 vecEye, float3 worldPos, float specularF90, float3 lightmapColor)
 {
-	float NdotV = dot(Mtl.Normal, V);
-	float3 R = 2.0f * NdotV * Mtl.Normal - V; // reflection direction
-	NdotV = saturate(NdotV);
+	// Expand the range of environment diffuse lighting to compensate for reduced ambient component
+	const float3 ambientAdjust = gFC_HemAmbCol_u.rgb * (1 - AMBIENT_MULTIPLIER);
 
-	float3 specularIBL = evaluateIBLSpecular(Mtl.Normal, R, vertexNormal, NdotV, Mtl.Roughness, Mtl.SpecularColor, specularF90);
-	float3 diffuseIBL = evaluateIBLDiffuse(Mtl.Normal, V, NdotV, Mtl.Roughness);
-#ifdef USE_SH
-	if (gFC_SHEnabled != 0.0f) { // add SH component
-		diffuseIBL += CalcSH(Mtl.Normal, float4(worldPos, 1.0f));
-	}
-#endif
-	diffuseIBL *= Mtl.DiffuseColor;
+	// This is a hack that assumes the shadow direction is always opposite the environment directional
+	// light and attempts to find the max ranges of light in the current render from the light cubes
+	const float3 sunDirection = -gFC_ShadowLightDir.xyz;
+	const float3 diffMult = CalcDiffuseLD(sunDirection) * (1 + ambientAdjust);
+	const float3 specMult = CalcSpecularLD(sunDirection, Mtl.Roughness);
 
-	return Mtl.LightPower * (diffuseIBL + specularIBL);
+	// This approximates the direction of sunlight hitting the surface
+	const float sunAngle = 0.5f * M_PI/180.0f;
+	const float sunSin = sin(sunAngle);
+	const float sunCos = cos(sunAngle);
+
+	const float3 reflection = 2 * dot(vecEye, Mtl.Normal) * Mtl.Normal - vecEye;
+	const float sunDot = dot(sunDirection, reflection);
+	const float3 tangent = normalize(reflection - sunDot * sunDirection);
+	const float3 lightDirection = sunDot < sunCos ? normalize(sunCos * sunDirection + tangent * sunSin) : reflection;
+
+	const float3 diffContrib = Mtl.DiffuseColor * M_INV_PI * diffMult * lightmapColor;
+	const float3 specContrib = microfacets_brdf(Mtl.Normal, lightDirection, vecEye, Mtl.SpecularColor, specularF90, Mtl.Roughness) * specMult;
+
+	// Basic overall lighting component
+	const float illuminance = saturate(dot(Mtl.Normal, sunDirection));
+
+	return illuminance * ((diffContrib + specContrib) * M_PI);
 }
 
 MATERIAL PackMaterial(float4 albedo, float4 pblTexData, float3 normal)

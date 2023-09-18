@@ -205,17 +205,15 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	float3 emissiveComponent = CalcEmissive(Mtl);
 
 	//image-based lighting
-	float3 envLightComponent = CalcEnvIBL(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90) * lightmapColor.rgb;
+	float3 envLightComponent = CalcEnvDirLight(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapColor.rgb);
 
 	//ambient light
-	envLightComponent += Mtl.DiffuseColor * CalcHemAmbient(Mtl.Normal);
+	envLightComponent += Mtl.DiffuseColor * gFC_HemAmbCol_d.rgb * AMBIENT_MULTIPLIER;
 
 	if (gFC_SAOEnabled != 0.0f) {
 		const float aoMapVal = tex2Dlod(gSMP_AOMap, float4(In.VtxClp.xy * gFC_SAOParams.xy, 0, 0)).r;
 		envLightComponent *= aoMapVal;
 	}
-
-	Mtl.LitColor.rgb = emissiveComponent + envLightComponent;
 
 #if(POINT_LIGHT_0 >POINT_LIGHT_TYPE_None)
 	float3 pointLightComponent = CalcPointLightsLegacy(Mtl, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapColor.a);
@@ -235,7 +233,14 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	#endif // WITH_GhostMap
 	}
 
-	Mtl.LitColor.rgb += pointLightComponent;
+	float3 lightComponent = envLightComponent + pointLightComponent;
+
+	if (gFC_SAOEnabled != 0.0f) {
+		const float aoMapVal = tex2Dlod(gSMP_AOMap, float4(In.VtxClp.xy * gFC_SAOParams.xy, 0, 0)).r;
+		lightComponent *= aoMapVal;
+	}
+
+	Mtl.LitColor.rgb = emissiveComponent + lightComponent;
 
 	{//Ghosting
 	#ifdef WITH_GhostMap
@@ -255,7 +260,6 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 #endif
 	Mtl.LitColor = scatteredColor;
 	Mtl.LitColor = Srgb2linear(Mtl.LitColor); //convert back to linear
-
 
 #ifdef WITH_Glow
 	Mtl.LitColor.rgb = ReverseToneMap(Mtl.LitColor.rgb * gFC_ToneCorrectParams.x);
