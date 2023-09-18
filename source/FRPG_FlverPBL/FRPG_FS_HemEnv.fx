@@ -208,7 +208,7 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	float3 envLightComponent = CalcEnvDirLight(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapColor.rgb);
 
 	//ambient light
-	envLightComponent += Mtl.DiffuseColor * gFC_HemAmbCol_d.rgb * AMBIENT_MULTIPLIER;
+	envLightComponent += Mtl.DiffuseColor * gFC_HemAmbCol_u.rgb * AMBIENT_MULTIPLIER;
 
 	if (gFC_SAOEnabled != 0.0f) {
 		const float aoMapVal = tex2Dlod(gSMP_AOMap, float4(In.VtxClp.xy * gFC_SAOParams.xy, 0, 0)).r;

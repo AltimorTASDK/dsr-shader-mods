@@ -557,7 +557,7 @@ float3 CalcEnvDirLight(MATERIAL Mtl, float3 vertexNormal, float3 vecEye, float3 
 	// This is a hack that assumes the shadow direction is always opposite the environment directional
 	// light and attempts to find the max ranges of light in the current render from the light cubes
 	const float3 sunDirection = -gFC_ShadowLightDir.xyz;
-	const float3 diffMult = CalcDiffuseLD(sunDirection) * (1 + ambientAdjust);
+	const float3 diffMult = CalcDiffuseLD(sunDirection) + ambientAdjust;
 	const float3 specMult = CalcSpecularLD(sunDirection, Mtl.Roughness);
 
 	// This approximates the direction of sunlight hitting the surface
