@@ -158,7 +158,7 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 			#else //WITH_ShadowMap == CalcLispPos_PS
 				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
 			#endif
-			lightmapColor.rgb = min(shadowMapVal.rgb, lightMapVal.rgb)*gFC_DebugPointLightParams.y;
+			lightmapColor.rgb = shadowMapVal.rgb*lightMapVal.rgb*gFC_DebugPointLightParams.y;
 			lightmapColor.a = lightMapVal.a*shadowMapVal.r; //QLOC: store shadowing from shadow map too
 		#else
 			//light map only
@@ -207,8 +207,10 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	//image-based lighting
 	float3 envLightComponent = CalcEnvDirLight(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapColor.rgb);
 
-	//ambient light
-	envLightComponent += Mtl.DiffuseColor * gFC_HemAmbCol_u.rgb * AMBIENT_MULTIPLIER;
+	//ambient light (use diffuse without PBR scaling so metal gets ambient light)
+	const float3 linearSampledColor = Srgb2linear(sampledColor.rgb * gFC_DifMapMulCol.rgb);
+	const float3 rawDiffuse = Mtl.LightPower * linearSampledColor;
+	envLightComponent += rawDiffuse * gFC_HemAmbCol_u.rgb * AMBIENT_MULTIPLIER;
 
 	if (gFC_SAOEnabled != 0.0f) {
 		const float aoMapVal = tex2Dlod(gSMP_AOMap, float4(In.VtxClp.xy * gFC_SAOParams.xy, 0, 0)).r;
@@ -216,9 +218,9 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	}
 
 #if(POINT_LIGHT_0 >POINT_LIGHT_TYPE_None)
-	float3 pointLightComponent = CalcPointLightsLegacy(Mtl, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapColor.a);
+	float3 pointLightComponent = CalcPointLightsLegacy(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapColor.a);
 #else
-	float3 pointLightComponent = CalcPointLightsClustered(Mtl, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapColor.a);
+	float3 pointLightComponent = CalcPointLightsClustered(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapColor.a);
 #endif
 
 	{//Ghost lights

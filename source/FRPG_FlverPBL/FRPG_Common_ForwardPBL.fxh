@@ -225,13 +225,22 @@ float perceivedLinear(float distance, float falloffEnd, float OneOverFalloffEndM
 	return saturate(pow((falloffEnd - distance)*OneOverFalloffEndMinusStart, 3));
 }
 
-float3 PointLightContribution(float3 N, float3 L, float3 V,
+float CalcSpecularHorizonFade(float3 vertexNormal, float3 lightDirection)
+{
+	// Horizon fading trick from http://marmosetco.tumblr.com/post/81245981087
+	const float vertexLightDot = dot(vertexNormal, lightDirection);
+	const float horizonFade = 1.3;
+	return saturate(1.0 + horizonFade * vertexLightDot);
+}
+
+float3 PointLightContribution(float3 N, float3 vertexNormal, float3 L, float3 V,
 	float3 diffColor, float3 specColor, float specF90,
 	float roughness, float3 LampColor, float LampDist,
 	float OneOverFalloffEndMinusStart, float LampFalloffEnd, uint falloffMode)
 {
+	const float horizonFade = CalcSpecularHorizonFade(vertexNormal, L);
 	float3 diffContrib = diffColor * M_INV_PI;
-	float3 specContrib = microfacets_brdf(N, L, V, specColor, specF90, roughness);
+	float3 specContrib = microfacets_brdf(N, L, V, specColor, specF90, roughness) * horizonFade;
 
 	// Note that the lamp intensity is using ½computer games units" i.e. it needs
 	// to be multiplied by M_PI.
@@ -470,7 +479,7 @@ uint3 GetClusterCoords(float3 worldPos) {
 	return clusterCoords;
 }
 
-float3 CalcPointLightsLegacy(MATERIAL Mtl, float3 V, float3 worldPos, float specularF90, float lightmapShadow)
+float3 CalcPointLightsLegacy(MATERIAL Mtl, float3 vertexNormal, float3 V, float3 worldPos, float specularF90, float lightmapShadow)
 {
 	float3 pointLightComponent = float3(0.0f, 0.0f, 0.0f);
 
@@ -480,7 +489,7 @@ float3 CalcPointLightsLegacy(MATERIAL Mtl, float3 V, float3 worldPos, float spec
 		float distL = length(L);
 		if (distL < gFC_PntLightCol[i].w) {
 			L *= 1.0 / distL;
-			pointLightComponent += PointLightContribution(Mtl.Normal, L, V,
+			pointLightComponent += PointLightContribution(Mtl.Normal, vertexNormal, L, V,
 				Mtl.DiffuseColor, Mtl.SpecularColor, specularF90,
 				Mtl.Roughness, gFC_PntLightCol[i].xyz, distL,
 				gFC_PntLightPos[i].w, gFC_PntLightCol[i].w, (uint)gFC_DebugPointLightParams.x);
@@ -490,7 +499,7 @@ float3 CalcPointLightsLegacy(MATERIAL Mtl, float3 V, float3 worldPos, float spec
 	return pointLightComponent;
 }
 
-float3 CalcPointLightsClustered(MATERIAL Mtl, float3 V, float3 worldPos, float specularF90, float lightmapShadow)
+float3 CalcPointLightsClustered(MATERIAL Mtl, float3 vertexNormal, float3 V, float3 worldPos, float specularF90, float lightmapShadow)
 {
 	float3 pointLightComponent = float3(0.0f, 0.0f, 0.0f);
 
@@ -518,7 +527,7 @@ float3 CalcPointLightsClustered(MATERIAL Mtl, float3 V, float3 worldPos, float s
 		if (distL < lightColor.w) {
 			float lightmapFactor = lerp(lightmapShadow, 1, attenuation);
 			L /= distL;
-			pointLightComponent += PointLightContribution(Mtl.Normal, L, V,
+			pointLightComponent += PointLightContribution(Mtl.Normal, vertexNormal, L, V,
 				Mtl.DiffuseColor, Mtl.SpecularColor, specularF90,
 				Mtl.Roughness, lightColor.xyz, distL,
 				lightPosition.w, lightColor.w, falloffMode) * lightmapFactor;
@@ -551,14 +560,7 @@ float3 CalcEmissive(MATERIAL Mtl)
 
 float3 CalcEnvDirLight(MATERIAL Mtl, float3 vertexNormal, float3 vecEye, float3 worldPos, float specularF90, float3 lightmapColor)
 {
-	// Expand the range of environment diffuse lighting to compensate for reduced ambient component
-	const float3 ambientAdjust = gFC_HemAmbCol_u.rgb * (1 - AMBIENT_MULTIPLIER);
-
-	// This is a hack that assumes the shadow direction is always opposite the environment directional
-	// light and attempts to find the max ranges of light in the current render from the light cubes
 	const float3 sunDirection = -gFC_ShadowLightDir.xyz;
-	const float3 diffMult = CalcDiffuseLD(sunDirection) + ambientAdjust;
-	const float3 specMult = CalcSpecularLD(sunDirection, Mtl.Roughness);
 
 	// This approximates the direction of sunlight hitting the surface
 	const float sunAngle = 0.5f * M_PI/180.0f;
@@ -568,7 +570,16 @@ float3 CalcEnvDirLight(MATERIAL Mtl, float3 vertexNormal, float3 vecEye, float3 
 	const float3 reflection = 2 * dot(vecEye, Mtl.Normal) * Mtl.Normal - vecEye;
 	const float sunDot = dot(sunDirection, reflection);
 	const float3 tangent = normalize(reflection - sunDot * sunDirection);
-	const float3 lightDirection = sunDot < sunCos ? normalize(sunCos * sunDirection + tangent * sunSin) : reflection;
+	const float3 lightDirection = sunDot < sunCos ? normalize(sunCos * sunDirection + sunSin * tangent) : reflection;
+
+	// Expand the range of environment diffuse lighting to compensate for reduced ambient component
+	const float3 ambientAdjust = gFC_HemAmbCol_u.rgb * (1 - AMBIENT_MULTIPLIER);
+	const float horizonFade = CalcSpecularHorizonFade(vertexNormal, lightDirection);
+
+	// This is a hack that assumes the shadow direction is always opposite the environment directional
+	// light and attempts to find the max ranges of light in the current render from the light cubes
+	const float3 diffMult = CalcDiffuseLD(sunDirection) + ambientAdjust;
+	const float3 specMult = CalcSpecularLD(sunDirection, Mtl.Roughness) * horizonFade;
 
 	const float3 diffContrib = Mtl.DiffuseColor * M_INV_PI * diffMult * lightmapColor;
 	const float3 specContrib = microfacets_brdf(Mtl.Normal, lightDirection, vecEye, Mtl.SpecularColor, specularF90, Mtl.Roughness) * specMult;
@@ -576,7 +587,11 @@ float3 CalcEnvDirLight(MATERIAL Mtl, float3 vertexNormal, float3 vecEye, float3 
 	// Basic overall lighting component
 	const float illuminance = saturate(dot(Mtl.Normal, sunDirection));
 
-	return illuminance * ((diffContrib + specContrib) * M_PI);
+	const float3 preLD = illuminance * specContrib * M_PI;
+	const float2 preDFG = CalcSpecularDFG(dot(Mtl.Normal, vecEye), Mtl.Roughness);
+	const float3 finalSpecular = preLD * (Mtl.SpecularColor * preDFG.x + specularF90 * preDFG.y);
+
+	return illuminance * diffContrib * M_PI + finalSpecular;
 }
 
 MATERIAL PackMaterial(float4 albedo, float4 pblTexData, float3 normal)
