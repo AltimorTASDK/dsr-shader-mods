@@ -167,7 +167,7 @@ float3 fresnel(float vdh, float3 F0, float F90)
 	// Schlick with Spherical Gaussian approximation
 	// cf http://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf p3
 	float sphg = exp2((-5.55473*vdh - 6.98316) * vdh);
-	return F0 + (float3(F90, F90, F90) - F90*F0) * sphg;
+	return F0 + (F90 - F0) * sphg;
 }
 
 float G1(float ndw, float k)// w is either Ln or Vn
