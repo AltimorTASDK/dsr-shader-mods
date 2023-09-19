@@ -17,27 +17,33 @@ VARIANTS := $(foreach Spc,___ Spc, \
             $(foreach Sdw,___ Sdw Csd, \
             Dif$(Spc)$(Bmp)$(Mul)$(Lit)$(Sdw))))))
 
-SFX_VARIANTS := $(patsubst %,%_HemEnv,$(VARIANTS)) \
-                $(patsubst %,%_HemEnvLerp,$(VARIANTS)) \
-                $(patsubst %,%_HemEnvLerpPntS,$(VARIANTS)) \
-                $(patsubst %,%_HemEnvPntS,$(VARIANTS))
+GST_VARIANTS := $(VARIANTS:=_HemEnv) \
+                $(VARIANTS:=_HemEnvLerp) \
+                $(VARIANTS:=_HemEnvLerpPntS) \
+                $(VARIANTS:=_HemEnvPntS)
 
-PHN_VARIANTS := $(patsubst %,%_HemEnv,$(VARIANTS)) \
-                $(patsubst %,%_HemEnvLerp,$(VARIANTS)) \
-                $(patsubst %,%_HemEnvLerpParallax,$(VARIANTS)) \
-                $(patsubst %,%_HemEnvLerpPntS,$(VARIANTS)) \
-                $(patsubst %,%_HemEnvLerpSubsurf,$(VARIANTS)) \
-                $(patsubst %,%_HemEnvParallax,$(VARIANTS)) \
-                $(patsubst %,%_HemEnvPntS,$(VARIANTS)) \
-                $(patsubst %,%_HemEnvSubsurf,$(VARIANTS))
+PHN_VARIANTS := $(VARIANTS:=_HemEnv) \
+                $(VARIANTS:=_HemEnvLerp) \
+                $(VARIANTS:=_HemEnvLerpParallax) \
+                $(VARIANTS:=_HemEnvLerpPntS) \
+                $(VARIANTS:=_HemEnvLerpSubsurf) \
+                $(VARIANTS:=_HemEnvParallax) \
+                $(VARIANTS:=_HemEnvPntS) \
+                $(VARIANTS:=_HemEnvSubsurf)
 
-TARGET_NAMES := $(patsubst %,FRPG_Sfx_%.fpo,$(SFX_VARIANTS)) \
-                $(patsubst %,FRPG_Phn_%.fpo,$(PHN_VARIANTS))
+SFX_VARIANTS := $(VARIANTS:=_HemEnv) \
+                $(VARIANTS:=_HemEnvLerp) \
+                $(VARIANTS:=_HemEnvLerpPntS) \
+                $(VARIANTS:=_HemEnvPntS)
+
+TARGET_NAMES := $(GST_VARIANTS:%=FRPG_Gst_%.fpo) \
+                $(PHN_VARIANTS:%=FRPG_Phn_%.fpo) \
+                $(SFX_VARIANTS:%=FRPG_Sfx_%.fpo)
 
 TARGETS := $(foreach target,$(TARGET_NAMES),$(FLVER_OUT)/$(target))
 
-DEFINES := //D_WIN32=1 //D_FRAGMENT_SHADER=1 //D_DX11=1
-FXCFLAGS = //Tps_5_0 $(DEFINES) //nologo
+DEFINES := _WIN32=1 _FRAGMENT_SHADER=1 _DX11=1
+FXCFLAGS = //Tps_5_0 //nologo $(foreach define,$(DEFINES),//D$(define))
 
 SOURCES := $(shell find $(SRC_DIR) $(COMMON_DIR) -type f 2> /dev/null)
 
@@ -57,11 +63,8 @@ $(FLVER_DCX): $(TARGETS)
 $(FLVER_OUT):
 	@Yabber $(FLVER_DCX)
 
-$(FLVER_OUT)/FRPG_%.fpo: $(SOURCES) $(FLVER_OUT)
-	@fxc $(SRC_DIR)/FRPG_FS_HemEnv.fx "//Fo$(subst /,\\,$@)" $(FXCFLAGS) //EFragmentMain
-
 add_variant = $(foreach name,$(TARGET_NAMES), \
-	$(if $(findstring $(strip $1),$(name)),$(FLVER_OUT)/$(name),)): DEFINES += //D$(strip $2)
+	$(if $(findstring $(strip $1),$(name)),$(FLVER_OUT)/$(name),)): DEFINES += $(strip $2)
 
 $(call add_variant, Spc, WITH_SpecularMap)
 $(call add_variant, Bmp, WITH_BumpMap)
@@ -75,4 +78,11 @@ $(call add_variant, Parallax, WITH_Parallax)
 $(call add_variant, PntS,     WITH_PntS)
 $(call add_variant, Subsurf,  FS_SUBSURF)
 
-$(FLVER_OUT)/FRPG_Sfx_%.fpo: DEFINES += //DWITH_Glow
+$(FLVER_OUT)/FRPG_Gst_%.fpo: DEFINES += WITH_GhostMap
+$(FLVER_OUT)/FRPG_Sfx_%.fpo: DEFINES += WITH_Glow
+
+$(FLVER_OUT)/FRPG_%.fpo: OUT_OBJ = $(subst /,\\,$@)
+$(FLVER_OUT)/FRPG_%.fpo: OUT_ASM = $(OUT_OBJ:.fpo=.asm)
+
+$(FLVER_OUT)/FRPG_%.fpo: $(SOURCES) $(FLVER_OUT)
+	@fxc $(SRC_DIR)/FRPG_FS_HemEnv.fx "//Fo$(OUT_OBJ)" "//Fc$(OUT_ASM)" $(FXCFLAGS) //EFragmentMain
