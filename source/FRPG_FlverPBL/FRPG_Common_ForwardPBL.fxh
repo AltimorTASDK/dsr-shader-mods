@@ -182,7 +182,7 @@ float visibility(float ndl, float ndv, float Roughness)
 	// Schlick with Smith-like choice of k
 	// cf http://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf p3
 	// visibility is a Cook-Torrance geometry function divided by (n.l)*(n.v)
-	float k = Roughness * Roughness * 0.5;
+	float k = pow(Roughness + 1, 2) / 8;
 	return G1(ndl, k)*G1(ndv, k);
 }
 
