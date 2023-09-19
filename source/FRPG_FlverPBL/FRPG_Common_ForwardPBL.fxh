@@ -376,6 +376,17 @@ float3 CalcSpecularLD(float3 dominantR, float roughness)
 #endif
 }
 
+float3 CalcSpecularLD(float3 dominantR)
+{
+#ifdef WITH_EnvLerp
+	float3 spec1 = gFC_EnvSpcMapMulCol.rgb * texCUBElod(gSMP_EnvSpcMap, float4(dominantR, 0.0f)).rgb;
+	float3 spec2 = gFC_EnvSpcMapMulCol2.rgb * texCUBElod(gSMP_EnvSpcMap2, float4(dominantR, 0.0f)).rgb;
+	return gFC_SpcMapMultiplier * lerp(spec1, spec2, gFC_EnvSpcMapMulCol2.a);
+#else
+	return gFC_EnvSpcMapMulCol.rgb * gFC_SpcMapMultiplier * texCUBElod(gSMP_LightProbeSpec, float4(dominantR, 0.0f)).rgb;
+#endif
+}
+
 // Approximates luminance from an RGB value
 float CalcLuminance(float3 color)
 {
@@ -579,7 +590,7 @@ float3 CalcEnvDirLight(MATERIAL Mtl, float3 vertexNormal, float3 vecEye, float3 
 	// This is a hack that assumes the shadow direction is always opposite the environment directional
 	// light and attempts to find the max ranges of light in the current render from the light cubes
 	const float3 diffMult = CalcDiffuseLD(sunDirection) + ambientAdjust;
-	const float3 specMult = CalcSpecularLD(sunDirection, Mtl.Roughness) * horizonFade;
+	const float3 specMult = CalcSpecularLD(sunDirection) * horizonFade;
 
 	const float3 diffContrib = Mtl.DiffuseColor * M_INV_PI * diffMult * lightmapColor;
 	const float3 specContrib = microfacets_brdf(Mtl.Normal, lightDirection, vecEye, Mtl.SpecularColor, specularF90, Mtl.Roughness) * specMult;
@@ -587,11 +598,7 @@ float3 CalcEnvDirLight(MATERIAL Mtl, float3 vertexNormal, float3 vecEye, float3 
 	// Basic overall lighting component
 	const float illuminance = saturate(dot(Mtl.Normal, sunDirection));
 
-	const float3 preLD = illuminance * specContrib * M_PI;
-	const float2 preDFG = CalcSpecularDFG(dot(Mtl.Normal, vecEye), Mtl.Roughness);
-	const float3 finalSpecular = preLD * (Mtl.SpecularColor * preDFG.x + specularF90 * preDFG.y);
-
-	return illuminance * diffContrib * M_PI + finalSpecular;
+	return illuminance * (diffContrib + specContrib) * M_PI;
 }
 
 MATERIAL PackMaterial(float4 albedo, float4 pblTexData, float3 normal)
