@@ -230,7 +230,7 @@ float CalcSpecularHorizonFade(float3 vertexNormal, float3 lightDirection)
 	// Horizon fading trick from http://marmosetco.tumblr.com/post/81245981087
 	const float vertexLightDot = dot(vertexNormal, lightDirection);
 	const float horizonFade = 1.3;
-	return saturate(1.0 + horizonFade * vertexLightDot);
+	return pow(saturate(1.0 + horizonFade * vertexLightDot), 2);
 }
 
 float3 PointLightContribution(float3 N, float3 vertexNormal, float3 L, float3 V,
@@ -597,7 +597,7 @@ float3 CalcEnvDirLight(MATERIAL Mtl, float3 vertexNormal, float3 vecEye, float3 
 	const float3 diffContrib = Mtl.DiffuseColor * M_INV_PI * diffMult * lightmapColor;
 	const float3 specContrib = microfacets_brdf(Mtl.Normal, lightDirection, vecEye, Mtl.SpecularColor, specularF90, Mtl.Roughness) * specMult;
 
-	// Basic overall lighting component
+	// Lambertian term
 	const float illuminance = saturate(dot(Mtl.Normal, sunDirection));
 
 	return illuminance * (diffContrib + specContrib) * M_PI;
