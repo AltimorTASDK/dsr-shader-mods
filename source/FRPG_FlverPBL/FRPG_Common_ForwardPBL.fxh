@@ -590,7 +590,9 @@ float3 CalcEnvDirLight(MATERIAL Mtl, float3 vertexNormal, float3 vecEye, float3 
 	// This is a hack that assumes the shadow direction is always opposite the environment
 	// directional light and attempts to find the max range of light in the IBL cubemap
 	const float3 diffMult = CalcDiffuseLD(sunDirection) + ambientAdjust;
-	const float3 specMult = CalcSpecularLD(Mtl.Normal, Mtl.Roughness) * horizonFade;
+
+	const float3 dominantR = getSpecularDominantDir_forLightProbe(Mtl.Normal, reflection, Mtl.Roughness);
+	const float3 specMult = CalcSpecularLD(dominantR, Mtl.Roughness) * horizonFade;
 
 	const float3 diffContrib = Mtl.DiffuseColor * M_INV_PI * diffMult * lightmapColor;
 	const float3 specContrib = microfacets_brdf(Mtl.Normal, lightDirection, vecEye, Mtl.SpecularColor, specularF90, Mtl.Roughness) * specMult;
