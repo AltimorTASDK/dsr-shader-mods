@@ -1,551 +1,464 @@
 #line 1 "C:\\J_noAV\\Fantasy_BUILD\\FRPG\\Source\\Shader\\FRPG_Deferred\\FRPG_Deferred_PointLight.fx"
 
-
 #line 14
-
 
 #line 1 "C:\\J_noAV\\Fantasy_BUILD\\FRPG\\Source\\Shader\\FRPG_Deferred\\FRPG_Deferred_Common.fxh"
 
-
 #line 15
-
-
-
-
 
 #line 1 "C:\\J_noAV\\Fantasy_BUILD\\FRPG\\Source\\Shader\\Common\\dx11.h"
 
-
-
 #line 87
-
 
 #line 90
 
+cbuffer AlphaTestBuffer : register(b1)
+{
+	int AlphaTest;
+	float3 AlphaTestRef;
+	float4 AlphaTest_padding;
+}
 
+float4 qlocDoAlphaTest(const float4 outColor)
+{
+	if (AlphaTest == 1)
+		clip(outColor.a <= AlphaTestRef.x ? -1 : 1);
+	return outColor;
+}
 
+cbuffer ClipPlaneBuffer : register(b2)
+{
+	int ClipPlaneEnabled;
+	float4 ClipPlane;
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-cbuffer AlphaTestBuffer : register ( b1 ) 
-{ 
-    int AlphaTest ; 
-    float3 AlphaTestRef ; 
-    float4 AlphaTest_padding ; 
-} 
-float4 qlocDoAlphaTest ( const float4 outColor ) 
-{ 
-    if ( AlphaTest == 1 ) 
-    { 
-        clip ( outColor . a <= AlphaTestRef . x ? - 1 : 1 ) ; 
-    } 
-    return outColor ; 
-} 
-
-cbuffer ClipPlaneBuffer : register ( b2 ) 
-{ 
-    int ClipPlaneEnabled ; 
-    float4 ClipPlane ; 
-} 
-float qlocClipPlaneDistance ( float4 pos ) 
-{ 
-    if ( ClipPlaneEnabled == 1 ) 
-    { 
-        return dot ( ClipPlane , pos ) ; 
-    } 
-    else 
-    { 
-        return 0.0f ; 
-    } 
-} 
+float qlocClipPlaneDistance(float4 pos)
+{
+	if (ClipPlaneEnabled == 1)
+		return dot(ClipPlane, pos);
+	else
+		return 0.0f;
+}
 
 #line 187
 
-
-
-
-
 #line 22 "C:\\J_noAV\\Fantasy_BUILD\\FRPG\\Source\\Shader\\FRPG_Deferred\\FRPG_Deferred_Common.fxh"
-
 
 #line 26
 
+struct VTX_IN_Prim {
+	float3 VecPos : POSITION;
+};
 
+struct VTX_OUT_Prim {
+	float4 VecPos : SV_Position;
+};
 
+struct VTX_IN_Filter {
+	uint Id : SV_VertexID;
+};
 
+struct VTX_OUT_Filter {
+	float4 VecPos : SV_Position;
+	float2 TexDif : TEXCOORD1;
+};
 
-
-struct VTX_IN_Prim 
-{ 
-    float3 VecPos : POSITION ; 
-} ; 
-struct VTX_OUT_Prim 
-{ 
-    float4 VecPos : SV_Position ; 
-} ; 
-
-struct VTX_IN_Filter 
-{ 
-    uint Id : SV_VertexID ; 
-} ; 
-
-struct VTX_OUT_Filter 
-{ 
-    float4 VecPos : SV_Position ; 
-    float2 TexDif : TEXCOORD1 ; 
-} ; 
-
-struct FRAGMENT_OUT 
-{ 
-    float4 Color : COLOR0 ; 
-} ; 
-
-
-
-
+struct FRAGMENT_OUT {
+	float4 Color : COLOR0;
+};
 
 #line 63
 
+Texture2D gSMP_0 : register(t0);
+Texture2D gSMP_1 : register(t1);
+Texture2D gSMP_2 : register(t2);
+Texture2D gSMP_3 : register(t3);
+Texture2D gSMP_4 : register(t4);
 
-
-Texture2D gSMP_0 : register ( t0 ) ; SamplerState gSMP_0Sampler : register ( s0 ) ; ; 
-Texture2D gSMP_1 : register ( t1 ) ; SamplerState gSMP_1Sampler : register ( s1 ) ; ; 
-Texture2D gSMP_2 : register ( t2 ) ; SamplerState gSMP_2Sampler : register ( s2 ) ; ; 
-Texture2D gSMP_3 : register ( t3 ) ; SamplerState gSMP_3Sampler : register ( s3 ) ; ; 
-Texture2D gSMP_4 : register ( t4 ) ; SamplerState gSMP_4Sampler : register ( s4 ) ; ; 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+SamplerState gSMP_0Sampler : register(s0);
+SamplerState gSMP_1Sampler : register(s1);
+SamplerState gSMP_2Sampler : register(s2);
+SamplerState gSMP_3Sampler : register(s3);
+SamplerState gSMP_4Sampler : register(s4);
 
 #line 91
-uniform float4x4 gVC_WorldViewClipMtx : c0 ; 
+uniform float4x4 gVC_WorldViewClipMtx : c0;
 
-uniform float4x4 gFC_InvViewClipMtx : register ( c0 ) ; 
-uniform float4 gFC_CameraPosition : register ( c4 ) ; 
-uniform float4 gFC_ScreenSize : register ( c5 ) ; 
-uniform float4 gFC_DebugMaterialParams1 : register ( c6 ) ; 
-uniform uint4 gFC_LightFalloff : register ( c7 ) ; 
-uniform float4 gFC_FogParam : register ( c38 ) ; 
-uniform float4 gFC_FogCol : register ( c39 ) ; 
+uniform float4x4 gFC_InvViewClipMtx : register(c0);
+uniform float4 gFC_CameraPosition : register(c4);
+uniform float4 gFC_ScreenSize : register(c5);
+uniform float4 gFC_DebugMaterialParams1 : register(c6);
+uniform uint4 gFC_LightFalloff : register(c7);
+uniform float4 gFC_FogParam : register(c38);
+uniform float4 gFC_FogCol : register(c39);
 
-float3 Srgb2linear ( float3 c ) 
-{ 
-    return pow ( c , float3 ( 2.2 , 2.2 , 2.2 ) ) ; 
-} 
+float3 Srgb2linear(float3 c)
+{
+	return pow(c, float3(2.2, 2.2, 2.2));
+}
 
-float3 Linear2srgb ( float3 c ) 
-{ 
-    return pow ( c , float3 ( 1 / 2.2 , 1 / 2.2 , 1 / 2.2 ) ) ; 
-} 
+float3 Linear2srgb(float3 c)
+{
+	return pow(c, float3(1 / 2.2, 1 / 2.2, 1 / 2.2));
+}
 
-float ReadDepthTexture ( float2 uv ) 
-{ 
-    float4 encodedDepth = gSMP_4 . SampleLevel ( gSMP_4Sampler , float4 ( uv , 0 , 0 ) . rg , float4 ( uv , 0 , 0 ) . w ) ; 
-    
-    return encodedDepth . r ; 
-    
+float ReadDepthTexture(float2 uv)
+{
+	float4 encodedDepth = gSMP_4.SampleLevel(gSMP_4Sampler, float4(uv, 0, 0).rg, float4(uv, 0, 0).w);
+
+	return encodedDepth.r;
+
 #line 119
-    
-} 
+}
 
-float4 GetWorldPositionFromDepth ( float2 uv ) 
-{ 
-    float depth = ReadDepthTexture ( uv ) ; 
-    
+float4 GetWorldPositionFromDepth(float2 uv)
+{
+	float depth = ReadDepthTexture(uv);
+
 #line 127
-    float4 pos ; 
-    pos . xy = ( 2.0f * float2 ( uv . x , - uv . y ) ) - float2 ( 1.0f , - 1.0f ) ; 
-    pos . z = depth ; 
-    pos . w = 1.0f ; 
-    float4 posC = mul ( pos , gFC_InvViewClipMtx ) ; 
-    pos = float4 ( posC . xyz , 1.0f ) / posC . w ; 
-    
-    return pos ; 
-} 
+	float4 pos;
+	pos.xy = (2.0f * float2(uv.x, -uv.y)) - float2(1.0f, -1.0f);
+	pos.z = depth;
+	pos.w = 1.0f;
+	float4 posC = mul(pos, gFC_InvViewClipMtx);
+	pos = float4(posC.xyz, 1.0f) / posC.w;
 
-float3 UnpackNormal ( float3 params ) 
-{ 
-    float3 normal ; 
-    normal . xy = params . xy * 2.0f - 1.0f ; 
-    normal . z = sqrt ( 1.0f - dot ( normal . xy , normal . xy ) ) * sign ( params . z - 0.5f ) ; 
-    if ( abs ( dot ( normal , normal ) ) < 0.0001f ) 
-    return float3 ( 0.0f , 0.0f , 0.0f ) ; 
-    return normalize ( normal ) ; 
-} 
+	return pos;
+}
 
-float2 OctWrap ( float2 v ) 
-{ 
-    return ( 1.0 - abs ( v . yx ) ) * ( v . xy >= 0.0 ? 1.0 : - 1.0 ) ; 
-} 
+float3 UnpackNormal(float3 params)
+{
+	float3 normal;
+	normal.xy = params.xy * 2.0f - 1.0f;
+	normal.z = sqrt(1.0f - dot(normal.xy, normal.xy)) * sign(params.z - 0.5f);
+	if (abs(dot(normal, normal)) < 0.0001f)
+		return float3(0.0f, 0.0f, 0.0f);
 
-float3 OctDecode ( float2 encN ) 
-{ 
-    encN = encN * 2.0 - 1.0 ; 
-    
-    float3 n ; 
-    n . z = 1.0 - abs ( encN . x ) - abs ( encN . y ) ; 
-    n . xy = n . z >= 0.0 ? encN . xy : OctWrap ( encN . xy ) ; 
-    n = normalize ( n ) ; 
-    return n ; 
-} 
+	return normalize(normal);
+}
 
-struct MATERIAL 
-{ 
-    float4 BaseColor ; 
-    float3 Normal ; 
-    float3 SpecularColor ; 
-    float Roughness ; 
-    
-    float AO ; 
-    
-    float3 Radiosity ; 
-    bool IsSubsurf ; 
-    float SubsurfStrength ; 
-    float SubsurfOpacity ; 
-} ; 
+float2 OctWrap(float2 v)
+{
+	return (1.0 - abs(v.yx)) * (v.xy >= 0.0 ? 1.0 : -1.0);
+}
 
-float FitRoughness ( float r ) 
-{ 
-    r = max ( 0.014f , r ) ; 
-    return r ; 
-} 
+float3 OctDecode(float2 encN)
+{
+	encN = encN * 2.0 - 1.0;
 
-float UnpackDiffuseF0 ( float f0 ) 
-{ 
-    return f0 / 5.0f ; 
-} 
+	float3 n;
+	n.z = 1.0 - abs(encN.x) - abs(encN.y);
+	n.xy = n.z >= 0.0 ? encN.xy : OctWrap(encN.xy);
+	n = normalize(n);
+	return n;
+}
 
-float PackDiffuseF0 ( float f0 ) 
-{ 
-    return f0 * 5.0f ; 
-} 
+struct MATERIAL {
+	float4 BaseColor;
+	float3 Normal;
+	float3 SpecularColor;
+	float Roughness;
 
-MATERIAL ReadGBuffer ( float2 uv ) 
-{ 
-    MATERIAL Out ; 
-    
-    float4 luv = float4 ( uv , 0 , 0 ) ; 
-    
+	float AO;
+
+	float3 Radiosity;
+	bool IsSubsurf;
+	float SubsurfStrength;
+	float SubsurfOpacity;
+};
+
+float FitRoughness(float r)
+{
+	r = max(0.014f, r);
+	return r;
+}
+
+float UnpackDiffuseF0(float f0)
+{
+	return f0 / 5.0f;
+}
+
+float PackDiffuseF0(float f0)
+{
+	return f0 * 5.0f;
+}
+
+MATERIAL ReadGBuffer(float2 uv)
+{
+	MATERIAL Out;
+
+	float4 luv = float4(uv, 0, 0);
+
 #line 201
-    float4 gBuf1 = gSMP_1 . SampleLevel ( gSMP_1Sampler , luv . rg , luv . w ) ; 
-    float4 gBuf2 = gSMP_2 . SampleLevel ( gSMP_2Sampler , luv . rg , luv . w ) ; 
-    float4 gBuf3 = gSMP_3 . SampleLevel ( gSMP_3Sampler , luv . rg , luv . w ) ; 
-    
-    Out . BaseColor = float4 ( Srgb2linear ( gBuf2 . xyz ) , 1.0f ) ; 
-    Out . Normal . xyz = OctDecode ( gBuf1 . xy ) ; 
-    
+	float4 gBuf1 = gSMP_1.SampleLevel(gSMP_1Sampler, luv.rg, luv.w);
+	float4 gBuf2 = gSMP_2.SampleLevel(gSMP_2Sampler, luv.rg, luv.w);
+	float4 gBuf3 = gSMP_3.SampleLevel(gSMP_3Sampler, luv.rg, luv.w);
+
+	Out.BaseColor = float4(Srgb2linear(gBuf2.xyz), 1.0f);
+	Out.Normal.xyz = OctDecode(gBuf1.xy);
+
 #line 210
-    Out . Roughness = gBuf1 . z ; 
-    
+	Out.Roughness = gBuf1.z;
+
 #line 213
-    Out . SpecularColor = Srgb2linear ( gBuf3 . xyz ) ; 
-    
-    if ( gBuf1 . w > 0.0f ) { 
-        Out . IsSubsurf = true ; 
-        Out . AO = 1.0f ; 
-        Out . SubsurfStrength = gBuf3 . w * 10.0f ; 
-        Out . SubsurfOpacity = gBuf2 . w ; 
-    } 
-    else { 
-        Out . IsSubsurf = false ; 
-        Out . AO = gBuf3 . w ; 
-        Out . SubsurfStrength = 0.0f ; 
-        Out . SubsurfOpacity = 1.0f ; 
-    } 
-    
-    Out . Radiosity = 0 ; 
-    
-    return Out ; 
-} 
+	Out.SpecularColor = Srgb2linear(gBuf3.xyz);
 
-float calcSpecularF90 ( float3 f0 ) 
-{ 
-    return saturate ( 50.0f * dot ( f0 , 0.33 ) ) ; 
-} 
+	if (gBuf1.w > 0.0f) {
+		Out.IsSubsurf = true;
+		Out.AO = 1.0f;
+		Out.SubsurfStrength = gBuf3.w * 10.0f;
+		Out.SubsurfOpacity = gBuf2.w;
+	} else {
+		Out.IsSubsurf = false;
+		Out.AO = gBuf3.w;
+		Out.SubsurfStrength = 0.0f;
+		Out.SubsurfOpacity = 1.0f;
+	}
 
-float linearRoughnessToMipLevel ( float lRoughness , float mipCount ) 
-{ 
-    
-    float lastMip = mipCount - 1 ; 
-    return log2 ( lRoughness ) * 1.2 + lastMip - 2 ; 
-} 
+	Out.Radiosity = 0;
 
-float3 getSpecularDominantDir_forLightProbe ( float3 N , float3 R , float roughness ) 
-{ 
-    float smoothness = saturate ( 1 - roughness ) ; 
-    float lerpFactor = smoothness * ( sqrt ( smoothness ) + roughness ) ; 
-    
-    return lerp ( N , R , lerpFactor ) ; 
-} 
+	return Out;
+}
 
-float3 getDiffuseDominantDir_forLightProbe ( float3 N , float3 V , float NdotV , float roughness ) 
-{ 
-    float a = 1.02341f * roughness - 1.51174f ; 
-    float b = - 0.511705f * roughness + 0.755868f ; 
-    float lerpFactor = saturate ( ( NdotV * a + b ) * roughness ) ; 
-    
-    return lerp ( N , V , lerpFactor ) ; 
-} 
+float calcSpecularF90(float3 f0)
+{
+	return saturate(50.0f * dot(f0, 0.33));
+}
 
-float4 CalcGetFogCol ( float4 inCol , float4 fogCol , float fogCoef ) 
-{ 
-    float mulFogCoef = fogCol . a * saturate ( fogCoef ) ; 
-    return float4 ( lerp ( inCol . rgb , fogCol . rgb , saturate ( mulFogCoef ) ) , inCol . a ) ; 
-} 
+float linearRoughnessToMipLevel(float lRoughness, float mipCount)
+{
+	float lastMip = mipCount - 1;
+	return log2(lRoughness) * 1.2 + lastMip - 2;
+}
+
+float3 getSpecularDominantDir_forLightProbe(float3 N, float3 R, float roughness)
+{
+	float smoothness = saturate(1 - roughness);
+	float lerpFactor = smoothness * (sqrt(smoothness) + roughness);
+
+	return lerp(N, R, lerpFactor);
+}
+
+float3 getDiffuseDominantDir_forLightProbe(float3 N, float3 V, float NdotV, float roughness)
+{
+	float a = 1.02341f * roughness - 1.51174f;
+	float b = -0.511705f * roughness + 0.755868f;
+	float lerpFactor = saturate((NdotV * a + b) * roughness);
+
+	return lerp(N, V, lerpFactor);
+}
+
+float4 CalcGetFogCol(float4 inCol, float4 fogCol, float fogCoef)
+{
+	float mulFogCoef = fogCol.a * saturate(fogCoef);
+	return float4(lerp(inCol.rgb, fogCol.rgb, saturate(mulFogCoef)), inCol.a);
+}
 
 #line 306
 
-
-
 #line 21 "C:\\J_noAV\\Fantasy_BUILD\\FRPG\\Source\\Shader\\FRPG_Deferred\\FRPG_Deferred_PointLight.fx"
-struct FRAGMENT_F32_OUT 
-{ 
-    float4 Color : SV_Target0 ; 
-} ; 
 
+struct FRAGMENT_F32_OUT {
+	float4 Color : SV_Target0;
+};
 
+uniform float4 gFC_LightPointPos0 : register(c35);
+uniform float4 gFC_LightPointIntensity0 : register(c36);
+uniform float4 gFC_LightPointAtt : register(c37);
 
-
-uniform float4 gFC_LightPointPos0 : register ( c35 ) ; 
-uniform float4 gFC_LightPointIntensity0 : register ( c36 ) ; 
-uniform float4 gFC_LightPointAtt : register ( c37 ) ; 
-
-float normal_distrib ( float ndh , float Roughness ) 
-{ 
-    
+float normal_distrib(float ndh, float Roughness)
+{
 #line 37
-    float alpha = Roughness * Roughness ; 
-    float tmp = alpha / ( ndh * ndh * ( alpha * alpha - 1.0 ) + 1.0 ) ; 
-    return tmp * tmp * 0.31830988618379067153776752674503 ; 
-} 
+	float alpha = Roughness * Roughness;
+	float tmp = alpha / (ndh * ndh * (alpha * alpha - 1.0) + 1.0);
+	return tmp * tmp * 0.31830988618379067153776752674503;
+}
 
-float3 fresnel ( float vdh , float3 F0 , float F90 ) 
-{ 
-    
+float3 fresnel(float vdh, float3 F0, float F90)
+{
 #line 46
-    float sphg = exp2 ( ( - 5.55473 * vdh - 6.98316 ) * vdh ) ; 
-    return F0 + ( float3 ( F90 , F90 , F90 ) - F90 * F0 ) * sphg ; 
-} 
+	float sphg = exp2((-5.55473 * vdh - 6.98316) * vdh);
+	return F0 + (float3(F90, F90, F90) - F90 * F0) * sphg;
+}
 
-float G1 ( float ndw , float k ) 
-{ 
-    
+float G1(float ndw, float k)
+{
 #line 54
-    return 1.0 / ( ndw * ( 1.0 - k ) + k ) ; 
-} 
+	return 1.0 / (ndw * (1.0 - k) + k);
+}
 
-float visibility ( float ndl , float ndv , float Roughness ) 
-{ 
-    
+float visibility(float ndl, float ndv, float Roughness)
+{
 #line 62
-    float k = Roughness * Roughness * 0.5 ; 
-    return G1 ( ndl , k ) * G1 ( ndv , k ) ; 
-} 
+	float k = Roughness * Roughness * 0.5;
+	return G1(ndl, k) * G1(ndv, k);
+}
 
-float3 microfacets_brdf ( float3 Nn , float3 Ln , float3 Vn , float3 Ks , float Ks90 , float Roughness ) 
-{ 
-    Roughness = FitRoughness ( Roughness ) ; 
-    float3 Hn = normalize ( Vn + Ln ) ; 
-    float vdh = saturate ( dot ( Vn , Hn ) ) ; 
-    float ndh = saturate ( dot ( Nn , Hn ) ) ; 
-    float ndl = saturate ( dot ( Nn , Ln ) ) ; 
-    float ndv = saturate ( dot ( Nn , Vn ) ) ; 
-    return fresnel ( vdh , Ks , Ks90 ) * ( normal_distrib ( ndh , Roughness ) * visibility ( ndl , ndv , Roughness ) / 4.0 ) ; 
-} 
+float3 microfacets_brdf(float3 Nn, float3 Ln, float3 Vn, float3 Ks, float Ks90, float Roughness)
+{
+	Roughness = FitRoughness(Roughness);
+	float3 Hn = normalize(Vn + Ln);
+	float vdh = saturate(dot(Vn, Hn));
+	float ndh = saturate(dot(Nn, Hn));
+	float ndl = saturate(dot(Nn, Ln));
+	float ndv = saturate(dot(Nn, Vn));
+	return fresnel(vdh, Ks, Ks90) * (normal_distrib(ndh, Roughness) * visibility(ndl, ndv, Roughness) / 4.0);
+}
 
-float buggedLinearAttenuation ( float distance , float falloffEnd , float OneOverFalloffEndMinusStart ) 
-{ 
-    return saturate ( 1.0 - ( distance - OneOverFalloffEndMinusStart ) / ( falloffEnd - OneOverFalloffEndMinusStart ) ) ; 
-} 
+float buggedLinearAttenuation(float distance, float falloffEnd, float OneOverFalloffEndMinusStart)
+{
+	return saturate(1.0 - (distance - OneOverFalloffEndMinusStart) / (falloffEnd - OneOverFalloffEndMinusStart));
+}
 
-float linearAttenuation ( float distance , float falloffEnd , float OneOverFalloffEndMinusStart ) 
-{ 
-    return saturate ( ( falloffEnd - distance ) * OneOverFalloffEndMinusStart ) ; 
-} 
+float linearAttenuation(float distance, float falloffEnd, float OneOverFalloffEndMinusStart)
+{
+	return saturate((falloffEnd - distance) * OneOverFalloffEndMinusStart);
+}
 
-float qlocAttenuation ( float distance , float lightRadius , float decay ) 
-{ 
-    return pow ( saturate ( 1.0 - pow ( ( distance / lightRadius ) , 4.0 ) ) , 2.0 ) / ( pow ( distance , decay ) + 1.0 ) ; 
-} 
+float qlocAttenuation(float distance, float lightRadius, float decay)
+{
+	return pow(saturate(1.0 - pow((distance / lightRadius), 4.0)), 2.0) / (pow(distance, decay) + 1.0);
+}
 
-float unrealOffsetAttenuation ( float distance , float lightRadius , float OneOverFalloffEndMinusStart ) 
-{ 
-    float FalloffStart = lightRadius - 1.0 / OneOverFalloffEndMinusStart ; 
-    distance = max ( 0 , distance - FalloffStart ) ; 
-    lightRadius = max ( 0 , lightRadius - FalloffStart ) ; 
-    return pow ( saturate ( 1.0 - pow ( ( distance / lightRadius ) , 4.0 ) ) , 2.0 ) / ( pow ( distance , 2 ) + 1.0 ) ; 
-} 
+float unrealOffsetAttenuation(float distance, float lightRadius, float OneOverFalloffEndMinusStart)
+{
+	float FalloffStart = lightRadius - 1.0 / OneOverFalloffEndMinusStart;
+	distance = max(0, distance - FalloffStart);
+	lightRadius = max(0, lightRadius - FalloffStart);
+	return pow(saturate(1.0 - pow((distance / lightRadius), 4.0)), 2.0) / (pow(distance, 2) + 1.0);
+}
 
-float perceivedLinear ( float distance , float falloffEnd , float OneOverFalloffEndMinusStart ) 
-{ 
-    return saturate ( pow ( ( falloffEnd - distance ) * OneOverFalloffEndMinusStart , 3 ) ) ; 
-} 
+float perceivedLinear(float distance, float falloffEnd, float OneOverFalloffEndMinusStart)
+{
+	return saturate(pow((falloffEnd - distance) * OneOverFalloffEndMinusStart, 3));
+}
 
-float calcAttenuation ( float LampDist , float LampFalloffEnd , float OneOverFalloffEndMinusStart ) 
-{ 
-    float lampAtt ; 
-    switch ( gFC_LightFalloff . x ) 
-    { 
-        default : 
-        case 0 : 
-        lampAtt = buggedLinearAttenuation ( LampDist , LampFalloffEnd , OneOverFalloffEndMinusStart ) ; 
-        break ; 
-        case 1 : 
-        lampAtt = qlocAttenuation ( LampDist , LampFalloffEnd , OneOverFalloffEndMinusStart ) ; 
-        break ; 
-        case 2 : 
-        lampAtt = unrealOffsetAttenuation ( LampDist , LampFalloffEnd , OneOverFalloffEndMinusStart ) ; 
-        break ; 
-        case 3 : 
-        lampAtt = perceivedLinear ( LampDist , LampFalloffEnd , OneOverFalloffEndMinusStart ) ; 
-        break ; 
-        case 4 : 
-        lampAtt = linearAttenuation ( LampDist , LampFalloffEnd , OneOverFalloffEndMinusStart ) ; 
-        break ; 
-    } 
-    return lampAtt ; 
-} 
+float calcAttenuation(float LampDist, float LampFalloffEnd, float OneOverFalloffEndMinusStart)
+{
+	float lampAtt;
+	switch (gFC_LightFalloff.x) {
+	default:
+	case 0:
+		lampAtt = buggedLinearAttenuation(LampDist, LampFalloffEnd, OneOverFalloffEndMinusStart);
+		break;
+	case 1:
+		lampAtt = qlocAttenuation(LampDist, LampFalloffEnd, OneOverFalloffEndMinusStart);
+		break;
+	case 2:
+		lampAtt = unrealOffsetAttenuation(LampDist, LampFalloffEnd, OneOverFalloffEndMinusStart);
+		break;
+	case 3:
+		lampAtt = perceivedLinear(LampDist, LampFalloffEnd, OneOverFalloffEndMinusStart);
+		break;
+	case 4:
+		lampAtt = linearAttenuation(LampDist, LampFalloffEnd, OneOverFalloffEndMinusStart);
+		break;
+	}
+	return lampAtt;
+}
 
-float3 PointLightContribution ( float3 N , float3 L , float3 V , 
-float3 diffColor , float3 specColor , float specF90 , 
-float roughness , float3 LampColor , float lampAtt ) 
-{ 
-    float3 diffContrib = diffColor * 0.31830988618379067153776752674503 ; 
-    float3 specContrib = microfacets_brdf ( N , L , V , specColor , specF90 , roughness ) ; 
-    
+float3 PointLightContribution(float3 N, float3 L, float3 V,
+                              float3 diffColor, float3 specColor, float specF90,
+                              float roughness, float3 LampColor, float lampAtt)
+{
+	float3 diffContrib = diffColor * 0.31830988618379067153776752674503;
+	float3 specContrib = microfacets_brdf(N, L, V, specColor, specF90, roughness);
+
 #line 141
-    return saturate ( dot ( N , L ) ) * ( ( diffContrib + specContrib ) * LampColor * lampAtt * 3.1415926535897932384626433832795 ) ; 
-} 
+	return saturate(dot(N, L)) * ((diffContrib + specContrib) * LampColor * lampAtt * 3.1415926535897932384626433832795);
+}
 
 #line 145
-float TranslucencyScaled ( float thicknessSqrt , float translucency ) { 
-    return sqrt ( 1.0 - translucency ) * thicknessSqrt ; 
-} 
 
-float3 SSSSTransmittance ( 
+float TranslucencyScaled(float thicknessSqrt, float translucency)
+{
+	return sqrt(1.0 - translucency) * thicknessSqrt;
+}
+
+float3 SSSSTransmittance(
 
 #line 153
-float sqrtOpacity , 
+	float sqrtOpacity,
 
 #line 159
-float sssWidth ) { 
-    
+	float sssWidth)
+{
 #line 163
-    float scale = 8.25 / ( sssWidth * 0.012f ) ; 
-    
-    float d = sqrtOpacity * sqrtOpacity * scale ; 
-    
+	float scale = 8.25 / (sssWidth * 0.012f);
+
+	float d = sqrtOpacity * sqrtOpacity * scale;
+
 #line 172
-    float dd = - d * d ; 
-    float3 profile = float3 ( 0.233 , 0.455 , 0.649 ) * exp ( dd / 0.0064 ) + 
-    float3 ( 0.1 , 0.336 , 0.344 ) * exp ( dd / 0.0484 ) + 
-    float3 ( 0.118 , 0.198 , 0.0 ) * exp ( dd / 0.187 ) + 
-    float3 ( 0.113 , 0.007 , 0.007 ) * exp ( dd / 0.567 ) + 
-    float3 ( 0.358 , 0.004 , 0.0 ) * exp ( dd / 1.99 ) + 
-    float3 ( 0.078 , 0.0 , 0.0 ) * exp ( dd / 7.41 ) ; 
-    
+	float dd = -d * d;
+	float3 profile = float3(0.233, 0.455, 0.649) * exp(dd / 0.0064) +
+	                 float3(0.1, 0.336, 0.344) * exp(dd / 0.0484) +
+	                 float3(0.118, 0.198, 0.0) * exp(dd / 0.187) +
+	                 float3(0.113, 0.007, 0.007) * exp(dd / 0.567) +
+	                 float3(0.358, 0.004, 0.0) * exp(dd / 1.99) +
+	                 float3(0.078, 0.0, 0.0) * exp(dd / 7.41);
+
 #line 184
-    return profile ; 
-} 
+	return profile;
+}
 
 #line 190
-FRAGMENT_F32_OUT 
-FragmentMain ( VTX_OUT_Prim In ) 
-{ 
-    FRAGMENT_F32_OUT Out ; 
-    
-    float2 TexDif = In . VecPos . xy * gFC_ScreenSize . xy ; 
-    
-    MATERIAL Mtl = ReadGBuffer ( TexDif . xy ) ; 
-    
-    if ( Mtl . Roughness == 0.0f ) 
-    { 
-        discard ; 
-    } 
-    
-    float4 objPos = GetWorldPositionFromDepth ( TexDif . xy ) ; 
-    float3 V = normalize ( gFC_CameraPosition . xyz - objPos . xyz ) ; 
-    
-    if ( dot ( Mtl . Normal , Mtl . Normal ) == 0.0f ) 
-    { 
-        Out . Color = float4 ( 0.0f , 0.0f , 0.0f , 1.0f ) ; 
-        return Out ; 
-    } 
-    
-    float3 N = Mtl . Normal ; 
-    
-    float3 diffuseColor = Mtl . BaseColor . rgb ; 
-    float3 specularColor = Mtl . SpecularColor ; 
-    float specularF90 = calcSpecularF90 ( specularColor ) ; 
-    
-    float3 L = gFC_LightPointPos0 . xyz - objPos . xyz ; 
-    float distL = length ( L ) ; 
-    
-    if ( distL > gFC_LightPointIntensity0 . w ) 
-    { 
-        Out . Color = float4 ( 0.0f , 0.0f , 0.0f , 1.0f ) ; 
-        return Out ; 
-    } 
-    
-    float lampAtt = calcAttenuation ( distL , gFC_LightPointIntensity0 . w , gFC_LightPointPos0 . w ) * lerp ( Mtl . AO , 1 , gFC_LightPointAtt . w ) ; 
-    
-    L *= 1.0 / distL ; 
-    float3 litColor = PointLightContribution ( N , L , V , 
-    diffuseColor , specularColor , specularF90 , Mtl . Roughness , 
-    gFC_LightPointIntensity0 . xyz , lampAtt ) ; 
-    
-    if ( Mtl . IsSubsurf && Mtl . SubsurfStrength > 0.0f ) { 
-        litColor += diffuseColor * gFC_LightPointIntensity0 . xyz * lampAtt * SSSSTransmittance ( Mtl . SubsurfOpacity , Mtl . SubsurfStrength ) * saturate ( 0.3 + dot ( L , - N ) ) ; 
-    } 
-    
-    Out . Color = float4 ( ( litColor ) , 1.0f ) ; 
-    return Out ; 
-} 
+
+FRAGMENT_F32_OUT
+FragmentMain(VTX_OUT_Prim In)
+{
+	FRAGMENT_F32_OUT Out;
+
+	float2 TexDif = In.VecPos.xy * gFC_ScreenSize.xy;
+
+	MATERIAL Mtl = ReadGBuffer(TexDif.xy);
+
+	if (Mtl.Roughness == 0.0f)
+		discard;
+
+	float4 objPos = GetWorldPositionFromDepth(TexDif.xy);
+	float3 V = normalize(gFC_CameraPosition.xyz - objPos.xyz);
+
+	if (dot(Mtl.Normal, Mtl.Normal) == 0.0f) {
+		Out.Color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		return Out;
+	}
+
+	float3 N = Mtl.Normal;
+
+	float3 diffuseColor = Mtl.BaseColor.rgb;
+	float3 specularColor = Mtl.SpecularColor;
+	float specularF90 = calcSpecularF90(specularColor);
+
+	float3 L = gFC_LightPointPos0.xyz - objPos.xyz;
+	float distL = length(L);
+
+	if (distL > gFC_LightPointIntensity0.w) {
+		Out.Color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		return Out;
+	}
+
+	float lampAtt = calcAttenuation(distL, gFC_LightPointIntensity0.w, gFC_LightPointPos0.w) * lerp(Mtl.AO, 1, gFC_LightPointAtt.w);
+
+	L *= 1.0 / distL;
+	float3 litColor = PointLightContribution(N, L, V,
+	                                         diffuseColor, specularColor, specularF90, Mtl.Roughness,
+	                                         gFC_LightPointIntensity0.xyz, lampAtt);
+
+	if (Mtl.IsSubsurf && Mtl.SubsurfStrength > 0.0f)
+		litColor += diffuseColor * gFC_LightPointIntensity0.xyz * lampAtt * SSSSTransmittance(Mtl.SubsurfOpacity, Mtl.SubsurfStrength) * saturate(0.3 + dot(L, -N));
+
+	Out.Color = float4((litColor), 1.0f);
+	return Out;
+}
 
 #line 246
-VTX_OUT_Prim 
-VertexMain ( VTX_IN_Prim In ) 
-{ 
-    VTX_OUT_Prim Out ; 
-    
-    Out . VecPos = mul ( float4 ( In . VecPos . xyz , 1.0 ) , gVC_WorldViewClipMtx ) ; 
-    
-    return Out ; 
-} 
- 
+
+VTX_OUT_Prim
+VertexMain(VTX_IN_Prim In)
+{
+	VTX_OUT_Prim Out;
+
+	Out.VecPos = mul(float4(In.VecPos.xyz, 1.0), gVC_WorldViewClipMtx);
+
+	return Out;
+}
