@@ -61,12 +61,20 @@ StructuredBuffer<s_lightParams> lightParamBuffer : register(t18);
 
 float3 Srgb2linear(float3 c)
 {
+#ifdef WITH_GhostMap
+	return pow(max(float3(0, 0, 0), c), float3(2.2, 2.2, 2.2));
+#else
 	return pow(abs(c), float3(2.2, 2.2, 2.2));
+#endif
 }
 
 float3 Linear2srgb(float3 c)
 {
+#ifdef WITH_GhostMap
+	return pow(max(float3(0, 0, 0), c), float3(1 / 2.2, 1 / 2.2, 1 / 2.2));
+#else
 	return pow(abs(c), float3(1 / 2.2, 1 / 2.2, 1 / 2.2));
+#endif
 }
 
 float4 Srgb2linear(float4 c)

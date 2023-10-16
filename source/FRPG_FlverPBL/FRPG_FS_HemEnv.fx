@@ -225,13 +225,14 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 
 	{//Ghost lights
 	#ifdef WITH_GhostMap
-		const float4 vecPnt = CalcGetGhostLightVec(In.VtxWld.xyz);	//Calculate and obtain the direction and damping coefficient of ghost light
-		const float3 colPnt = gFC_GhostLightCol.rgb * vecPnt.w;	//Attenuate point light source color
-		pointLightComponent += CalcGetGhostLightDifLightCol(Mtl.Normal, vecPnt.xyz, colPnt.rgb);	//Diffuse
+		float3 L = gFC_GhostLightPos.xyz - In.VtxWld.xyz;
+		float distL = length(L);
 
-		#ifdef WITH_SpecularMap
-			pointLightComponent += CalcGetGhostLightSpcLightCol(Mtl.Normal, gFC_SpcParam, vecPnt.xyz, colPnt.rgb);	//Specular
-		#endif
+		pointLightComponent += PointLightContribution(
+			Mtl.Normal, vertexNormal, L / distL, In.VecEye.xyz,
+			Mtl.DiffuseColor, Mtl.SpecularColor, specularF90,
+			Mtl.Roughness, gFC_GhostLightCol.rgb, distL,
+			gFC_GhostLightPos.w, gFC_GhostLightCol.w, 0);
 	#endif // WITH_GhostMap
 	}
 
