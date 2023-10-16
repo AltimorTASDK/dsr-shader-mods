@@ -63,12 +63,12 @@ StructuredBuffer<s_lightParams> lightParamBuffer : register(t18);
 
 float3 Srgb2linear(float3 c)
 {
-	return pow(abs(c), float3(2.2, 2.2, 2.2));
+	return pow(max(float3(0, 0, 0), c), float3(2.2, 2.2, 2.2));
 }
 
 float3 Linear2srgb(float3 c)
 {
-	return pow(abs(c), float3(1 / 2.2, 1 / 2.2, 1 / 2.2));
+	return pow(max(float3(0, 0, 0), c), float3(1 / 2.2, 1 / 2.2, 1 / 2.2));
 }
 
 float4 Srgb2linear(float4 c)
@@ -385,6 +385,12 @@ float3 CalcSpecularLD(float3 dominantR)
 #else
 	return gFC_EnvSpcMapMulCol.rgb * gFC_SpcMapMultiplier * texCUBElod(gSMP_LightProbeSpec, float4(dominantR, 0.0f)).rgb;
 #endif
+}
+
+float3 CalcHemAmbient(float3 dominantN)
+{
+	float HemLerpRate = dominantN.y * 0.5f + 0.5f;
+	return lerp(gFC_HemAmbCol_d.xyz, gFC_HemAmbCol_u.xyz, HemLerpRate);
 }
 
 // Approximates luminance from an RGB value
