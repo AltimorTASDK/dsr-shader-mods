@@ -38,7 +38,7 @@
 #define CLUSTER_COUNT_Y 8
 #define CLUSTER_COUNT_Z 24
 
-#define AMBIENT_MULTIPLIER 0.5
+#define AMBIENT_MULTIPLIER 1.0f
 
 struct s_numLights {
 	uint offsetNum;
@@ -363,6 +363,17 @@ float3 CalcDiffuseLD(float3 dominantN)
 #endif
 }
 
+float3 CalcDiffuseLD()
+{
+#ifdef WITH_EnvLerp
+	float3 dif1 = gFC_EnvDifMapMulCol.rgb;
+	float3 dif2 = gFC_EnvDifMapMulCol2.rgb;
+	return gFC_DifMapMultiplier * lerp(dif1, dif2, gFC_EnvDifMapMulCol2.a);
+#else
+	return gFC_EnvDifMapMulCol.rgb * gFC_DifMapMultiplier;
+#endif
+}
+
 float3 CalcSpecularLD(float3 dominantR, float roughness)
 {
 	float mipLevel = linearRoughnessToMipLevel(roughness, gFC_LightProbeMipCount);
@@ -575,9 +586,10 @@ float3 CalcEmissive(MATERIAL Mtl)
 	return emissiveComponent;
 }
 
-float3 CalcEnvDirLight(MATERIAL Mtl, float3 vertexNormal, float3 vecEye, float3 worldPos, float specularF90, float3 lightmapColor)
+float3 CalcEnvDirLight(MATERIAL Mtl, float4 lightVec, float4 lightCol, float3 vertexNormal, float3 vecEye, float specularF90, float3 lightmapColor)
 {
-	const float3 sunDirection = -gFC_ShadowLightDir.xyz;
+	//const float3 sunDirection = -gFC_ShadowLightDir.xyz;
+	const float3 sunDirection = -lightVec.xyz;
 
 	// This approximates the direction of sunlight hitting the surface
 	const float sunAngle = 0.5f * M_PI/180.0f;
@@ -590,15 +602,14 @@ float3 CalcEnvDirLight(MATERIAL Mtl, float3 vertexNormal, float3 vecEye, float3 
 	const float3 lightDirection = sunDot < sunCos ? normalize(sunCos * sunDirection + sunSin * tangent) : reflection;
 
 	// Expand the range of environment diffuse lighting to compensate for reduced ambient component
-	const float3 ambientAdjust = gFC_HemAmbCol_u.rgb * (1 - AMBIENT_MULTIPLIER);
+	//const float3 ambientAdjust = gFC_HemAmbCol_u.rgb * (1 - AMBIENT_MULTIPLIER);
 	const float horizonFade = CalcSpecularHorizonFade(vertexNormal, lightDirection);
-
-	// This is a hack that assumes the shadow direction is always opposite the environment
-	// directional light and attempts to find the max range of light in the IBL cubemap
-	const float3 diffMult = CalcDiffuseLD(sunDirection) + ambientAdjust;
 
 	const float3 dominantR = getSpecularDominantDir_forLightProbe(Mtl.Normal, reflection, Mtl.Roughness);
 	const float3 specMult = CalcSpecularLD(dominantR, Mtl.Roughness) * horizonFade;
+
+	//const float3 diffMult = CalcDiffuseLD() + ambientAdjust;
+	const float3 diffMult = CalcDiffuseLD();
 
 	const float3 diffContrib = Mtl.DiffuseColor * M_INV_PI * diffMult * lightmapColor;
 	const float3 specContrib = microfacets_brdf(Mtl.Normal, lightDirection, vecEye, Mtl.SpecularColor, specularF90, Mtl.Roughness) * specMult;
@@ -606,7 +617,37 @@ float3 CalcEnvDirLight(MATERIAL Mtl, float3 vertexNormal, float3 vecEye, float3 
 	// Lambertian term
 	const float illuminance = saturate(dot(Mtl.Normal, sunDirection));
 
-	return illuminance * (diffContrib + specContrib) * M_PI;
+	return illuminance * (diffContrib + specContrib) * lightCol.rgb * M_PI;
+}
+
+float3 CalcEnvDirLightSpc(MATERIAL Mtl, float4 lightVec, float4 lightCol, float3 vertexNormal, float3 vecEye, float specularF90)
+{
+	//const float3 sunDirection = -gFC_ShadowLightDir.xyz;
+	const float3 sunDirection = -lightVec.xyz;
+
+	// This approximates the direction of sunlight hitting the surface
+	const float sunAngle = 0.5f * M_PI/180.0f;
+	const float sunSin = sin(sunAngle);
+	const float sunCos = cos(sunAngle);
+
+	const float3 reflection = 2 * dot(vecEye, Mtl.Normal) * Mtl.Normal - vecEye;
+	const float sunDot = dot(sunDirection, reflection);
+	const float3 tangent = normalize(reflection - sunDot * sunDirection);
+	const float3 lightDirection = sunDot < sunCos ? normalize(sunCos * sunDirection + sunSin * tangent) : reflection;
+
+	// Expand the range of environment diffuse lighting to compensate for reduced ambient component
+	//const float3 ambientAdjust = gFC_HemAmbCol_u.rgb * (1 - AMBIENT_MULTIPLIER);
+	const float horizonFade = CalcSpecularHorizonFade(vertexNormal, lightDirection);
+
+	const float3 dominantR = getSpecularDominantDir_forLightProbe(Mtl.Normal, reflection, Mtl.Roughness);
+	const float3 specMult = CalcSpecularLD(dominantR, Mtl.Roughness) * horizonFade;
+
+	const float3 specContrib = microfacets_brdf(Mtl.Normal, lightDirection, vecEye, Mtl.SpecularColor, specularF90, Mtl.Roughness) * specMult;
+
+	// Lambertian term
+	const float illuminance = saturate(dot(Mtl.Normal, sunDirection));
+
+	return illuminance * specContrib * lightCol.rgb * M_PI;
 }
 
 MATERIAL PackMaterial(float4 albedo, float4 pblTexData, float3 normal)
