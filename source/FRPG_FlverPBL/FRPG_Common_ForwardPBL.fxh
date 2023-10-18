@@ -39,6 +39,9 @@
 #define CLUSTER_COUNT_Z 24
 
 #define AMBIENT_MULTIPLIER 0.5f
+#define ENV_SPECULAR_MULTIPLIER 0.8f
+#define ENV_DIFFUSE_MULTIPLIER 1.1f
+#define CUBEMAP_POWER 2.0f
 
 struct s_numLights {
 	uint offsetNum;
@@ -379,22 +382,11 @@ float3 CalcSpecularLD(float3 dominantR, float roughness)
 	float mipLevel = linearRoughnessToMipLevel(roughness, gFC_LightProbeMipCount);
 	//add directional light
 #ifdef WITH_EnvLerp
-	float3 spec1 = gFC_EnvSpcMapMulCol.rgb * texCUBElod(gSMP_EnvSpcMap, float4(dominantR, mipLevel)).rgb;
-	float3 spec2 = gFC_EnvSpcMapMulCol2.rgb * texCUBElod(gSMP_EnvSpcMap2, float4(dominantR, mipLevel)).rgb;
+	float3 spec1 = gFC_EnvSpcMapMulCol.rgb * pow(texCUBElod(gSMP_EnvSpcMap, float4(dominantR, mipLevel)).rgb, CUBEMAP_POWER);
+	float3 spec2 = gFC_EnvSpcMapMulCol2.rgb * pow(texCUBElod(gSMP_EnvSpcMap2, float4(dominantR, mipLevel)).rgb, CUBEMAP_POWER);
 	return gFC_SpcMapMultiplier * lerp(spec1, spec2, gFC_EnvSpcMapMulCol2.a);
 #else
-	return gFC_EnvSpcMapMulCol.rgb * gFC_SpcMapMultiplier * texCUBElod(gSMP_LightProbeSpec, float4(dominantR, mipLevel)).rgb;
-#endif
-}
-
-float3 CalcSpecularLD(float3 dominantR)
-{
-#ifdef WITH_EnvLerp
-	float3 spec1 = gFC_EnvSpcMapMulCol.rgb * texCUBElod(gSMP_EnvSpcMap, float4(dominantR, 0.0f)).rgb;
-	float3 spec2 = gFC_EnvSpcMapMulCol2.rgb * texCUBElod(gSMP_EnvSpcMap2, float4(dominantR, 0.0f)).rgb;
-	return gFC_SpcMapMultiplier * lerp(spec1, spec2, gFC_EnvSpcMapMulCol2.a);
-#else
-	return gFC_EnvSpcMapMulCol.rgb * gFC_SpcMapMultiplier * texCUBElod(gSMP_LightProbeSpec, float4(dominantR, 0.0f)).rgb;
+	return gFC_EnvSpcMapMulCol.rgb * gFC_SpcMapMultiplier * pow(texCUBElod(gSMP_LightProbeSpec, float4(dominantR, mipLevel)).rgb, CUBEMAP_POWER);
 #endif
 }
 
@@ -588,7 +580,6 @@ float3 CalcEmissive(MATERIAL Mtl)
 
 float3 CalcEnvDirLight(MATERIAL Mtl, float4 lightVec, float4 lightCol, float3 vertexNormal, float3 vecEye, float specularF90, float3 lightmapColor)
 {
-	//const float3 sunDirection = -gFC_ShadowLightDir.xyz;
 	const float3 sunDirection = -lightVec.xyz;
 
 	// This approximates the direction of sunlight hitting the surface
@@ -602,14 +593,12 @@ float3 CalcEnvDirLight(MATERIAL Mtl, float4 lightVec, float4 lightCol, float3 ve
 	const float3 lightDirection = sunDot < sunCos ? normalize(sunCos * sunDirection + sunSin * tangent) : reflection;
 
 	// Expand the range of environment diffuse lighting to compensate for reduced ambient component
-	//const float3 ambientAdjust = gFC_HemAmbCol_u.rgb * (1 - AMBIENT_MULTIPLIER);
+	const float3 ambientAdjust = 1.0f + gFC_HemAmbCol_u.rgb * (1.0f - AMBIENT_MULTIPLIER);
+
 	const float horizonFade = CalcSpecularHorizonFade(vertexNormal, lightDirection);
-
 	const float3 dominantR = getSpecularDominantDir_forLightProbe(Mtl.Normal, reflection, Mtl.Roughness);
-	const float3 specMult = CalcSpecularLD(dominantR, Mtl.Roughness) * horizonFade;
-
-	//const float3 diffMult = CalcDiffuseLD() + ambientAdjust;
-	const float3 diffMult = CalcDiffuseLD();
+	const float3 specMult = CalcSpecularLD(dominantR, Mtl.Roughness) * horizonFade * ENV_SPECULAR_MULTIPLIER;
+	const float3 diffMult = CalcDiffuseLD() * ambientAdjust * ENV_DIFFUSE_MULTIPLIER;
 
 	const float3 diffContrib = Mtl.DiffuseColor * M_INV_PI * diffMult * lightmapColor;
 	const float3 specContrib = microfacets_brdf(Mtl.Normal, lightDirection, vecEye, Mtl.SpecularColor, specularF90, Mtl.Roughness) * specMult;
@@ -622,7 +611,6 @@ float3 CalcEnvDirLight(MATERIAL Mtl, float4 lightVec, float4 lightCol, float3 ve
 
 float3 CalcEnvDirLightSpc(MATERIAL Mtl, float4 lightVec, float4 lightCol, float3 vertexNormal, float3 vecEye, float specularF90)
 {
-	//const float3 sunDirection = -gFC_ShadowLightDir.xyz;
 	const float3 sunDirection = -lightVec.xyz;
 
 	// This approximates the direction of sunlight hitting the surface
@@ -635,13 +623,9 @@ float3 CalcEnvDirLightSpc(MATERIAL Mtl, float4 lightVec, float4 lightCol, float3
 	const float3 tangent = normalize(reflection - sunDot * sunDirection);
 	const float3 lightDirection = sunDot < sunCos ? normalize(sunCos * sunDirection + sunSin * tangent) : reflection;
 
-	// Expand the range of environment diffuse lighting to compensate for reduced ambient component
-	//const float3 ambientAdjust = gFC_HemAmbCol_u.rgb * (1 - AMBIENT_MULTIPLIER);
 	const float horizonFade = CalcSpecularHorizonFade(vertexNormal, lightDirection);
-
 	const float3 dominantR = getSpecularDominantDir_forLightProbe(Mtl.Normal, reflection, Mtl.Roughness);
-	const float3 specMult = CalcSpecularLD(dominantR, Mtl.Roughness) * horizonFade;
-
+	const float3 specMult = CalcSpecularLD(dominantR, Mtl.Roughness) * horizonFade * ENV_SPECULAR_MULTIPLIER;
 	const float3 specContrib = microfacets_brdf(Mtl.Normal, lightDirection, vecEye, Mtl.SpecularColor, specularF90, Mtl.Roughness) * specMult;
 
 	// Lambertian term
