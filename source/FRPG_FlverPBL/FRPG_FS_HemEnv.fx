@@ -214,7 +214,7 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	envLightComponent += CalcEnvDirLightSpc(Mtl, gFC_SpcLightVec, gFC_SpcLightCol, vertexNormal, In.VecEye.xyz, specularF90);
 
 	//scale environment lighting to make up for lost ambient component
-	envLightComponent *= 1.0f + gFC_HemAmbCol_u.rgb;
+	envLightComponent *= 1.0f + gFC_HemAmbCol_u.rgb * (1.0f - AMBIENT_MULTIPLIER);
 
 	//ambient light (use diffuse without PBR scaling so metal gets ambient light)
 	const float3 linearSampledColor = Srgb2linear(sampledColor.rgb * gFC_DifMapMulCol.rgb);
