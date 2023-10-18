@@ -89,7 +89,7 @@ extern "C" void hook_copy_shader_params3();
 static DWORD apply_hooks(void *param)
 {
 	// Wait to unpack
-	Sleep(5000);
+	Sleep(1000);
 
 	auto *target1 = sigscan(
 		"DarkSoulsRemastered.exe",
