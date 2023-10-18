@@ -9,6 +9,7 @@ SRC_DIR := source/FRPG_FlverPBL
 COMMON_DIR := source/Common
 FLVER_OUT := $(DSR)/shader/FRPG_FlverPBL_fpo_DX11-shaderbnd-dcx
 FLVER_DCX := $(DSR)/shader/FRPG_FlverPBL_fpo_DX11.shaderbnd.dcx
+FLVER_ME2 := $(DSR)/ModEngine2/dsr-lighting/shader/FRPG_FlverPBL_fpo_DX11.shaderbnd.dcx
 
 VARIANTS := $(foreach Spc,___ Spc, \
             $(foreach Bmp,___ Bmp, \
@@ -48,7 +49,7 @@ FXCFLAGS = //Tps_5_0 //nologo $(foreach define,$(DEFINES),//D$(define))
 SOURCES := $(shell find $(SRC_DIR) $(COMMON_DIR) -type f 2> /dev/null)
 
 .PHONY: all
-all: $(FLVER_DCX)
+all: $(FLVER_ME2)
 
 .PHONY: test
 test: STEAM := "$(shell echo $(DSR) | grep -Poh '.*/Steam(?=/steamapps)')/steam.exe"
@@ -56,6 +57,9 @@ test: APPID := 570940
 test: all
 	@echo "Launching Dark Souls Remastered"
 	@$(STEAM) -applaunch $(APPID)
+
+$(FLVER_ME2): $(FLVER_DCX)
+	@cp "$<" "$@"
 
 $(FLVER_DCX): $(TARGETS)
 	@Yabber $(FLVER_OUT)
