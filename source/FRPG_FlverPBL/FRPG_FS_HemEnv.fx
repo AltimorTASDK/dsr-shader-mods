@@ -213,10 +213,14 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 
 	envLightComponent += CalcEnvDirLightSpc(Mtl, gFC_SpcLightVec, gFC_SpcLightCol, vertexNormal, In.VecEye.xyz, specularF90);
 
-	//ambient light (use diffuse without PBR scaling so metal gets ambient light)
-	const float3 linearSampledColor = Srgb2linear(sampledColor.rgb * gFC_DifMapMulCol.rgb);
-	const float3 rawDiffuse = Mtl.LightPower * linearSampledColor;
-	envLightComponent += rawDiffuse * CalcHemAmbient(Mtl.Normal) * AMBIENT_MULTIPLIER;
+	//ambient diffuse
+	float3 hemAmbient = CalcHemAmbient(Mtl.Normal) * AMBIENT_MULTIPLIER;
+	envLightComponent += Mtl.DiffuseColor * hemAmbient;
+
+	//ambient specular
+	float3 specularLD = CalcSpecularLD(Mtl.Normal, Mtl.Roughness);
+	float3 specularAmbient = hemAmbient * (1.0f - AMBIENT_CUBEMAP_STRENGTH + specularLD * AMBIENT_CUBEMAP_STRENGTH);
+	envLightComponent += Mtl.SpecularColor * specularAmbient * AMBIENT_SPECULAR_MULTIPLIER;
 
 	if (gFC_SAOEnabled != 0.0f) {
 		const float aoMapVal = tex2Dlod(gSMP_AOMap, float4(In.VtxClp.xy * gFC_SAOParams.xy, 0, 0)).r;

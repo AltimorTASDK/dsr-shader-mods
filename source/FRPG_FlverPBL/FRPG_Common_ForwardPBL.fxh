@@ -39,9 +39,11 @@
 #define CLUSTER_COUNT_Z 24
 
 #define AMBIENT_MULTIPLIER 0.5f
-#define ENV_SPECULAR_MULTIPLIER 0.8f
+#define ENV_SPECULAR_MULTIPLIER 0.4f
 #define ENV_DIFFUSE_MULTIPLIER 1.1f
-#define CUBEMAP_POWER 2.0f
+#define CUBEMAP_POWER 1.75f
+#define AMBIENT_CUBEMAP_STRENGTH 0.5f
+#define AMBIENT_SPECULAR_MULTIPLIER 0.4f
 
 struct s_numLights {
 	uint offsetNum;
@@ -382,11 +384,11 @@ float3 CalcSpecularLD(float3 dominantR, float roughness)
 	float mipLevel = linearRoughnessToMipLevel(roughness, gFC_LightProbeMipCount);
 	//add directional light
 #ifdef WITH_EnvLerp
-	float3 spec1 = gFC_EnvSpcMapMulCol.rgb * pow(texCUBElod(gSMP_EnvSpcMap, float4(dominantR, mipLevel)).rgb, CUBEMAP_POWER);
-	float3 spec2 = gFC_EnvSpcMapMulCol2.rgb * pow(texCUBElod(gSMP_EnvSpcMap2, float4(dominantR, mipLevel)).rgb, CUBEMAP_POWER);
+	float3 spec1 = gFC_EnvSpcMapMulCol.rgb * pow(abs(texCUBElod(gSMP_EnvSpcMap, float4(dominantR, mipLevel)).rgb), CUBEMAP_POWER);
+	float3 spec2 = gFC_EnvSpcMapMulCol2.rgb * pow(abs(texCUBElod(gSMP_EnvSpcMap2, float4(dominantR, mipLevel)).rgb), CUBEMAP_POWER);
 	return gFC_SpcMapMultiplier * lerp(spec1, spec2, gFC_EnvSpcMapMulCol2.a);
 #else
-	return gFC_EnvSpcMapMulCol.rgb * gFC_SpcMapMultiplier * pow(texCUBElod(gSMP_LightProbeSpec, float4(dominantR, mipLevel)).rgb, CUBEMAP_POWER);
+	return gFC_EnvSpcMapMulCol.rgb * gFC_SpcMapMultiplier * pow(abs(texCUBElod(gSMP_LightProbeSpec, float4(dominantR, mipLevel)).rgb), CUBEMAP_POWER);
 #endif
 }
 
