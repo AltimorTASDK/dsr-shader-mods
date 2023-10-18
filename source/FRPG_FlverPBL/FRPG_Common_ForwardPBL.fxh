@@ -38,7 +38,7 @@
 #define CLUSTER_COUNT_Y 8
 #define CLUSTER_COUNT_Z 24
 
-#define AMBIENT_MULTIPLIER 1.0f
+#define AMBIENT_MULTIPLIER 0.5f
 
 struct s_numLights {
 	uint offsetNum;

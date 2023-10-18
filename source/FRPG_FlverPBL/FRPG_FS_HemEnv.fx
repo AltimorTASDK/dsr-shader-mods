@@ -204,9 +204,7 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	//emissive
 	float3 emissiveComponent = CalcEmissive(Mtl);
 
-	//image-based lighting
-	//float3 envLightComponent = CalcEnvDirLight(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapColor.rgb);
-
+	//environment directional lights
 	float3 envLightComponent = float3(0, 0, 0);
 
 	for (uint i = 0; i < 3; i++) {
@@ -215,10 +213,12 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 
 	envLightComponent += CalcEnvDirLightSpc(Mtl, gFC_SpcLightVec, gFC_SpcLightCol, vertexNormal, In.VecEye.xyz, specularF90);
 
+	//scale environment lighting to make up for lost ambient component
+	envLightComponent *= 1.0f + gFC_HemAmbCol_u.rgb;
+
 	//ambient light (use diffuse without PBR scaling so metal gets ambient light)
 	const float3 linearSampledColor = Srgb2linear(sampledColor.rgb * gFC_DifMapMulCol.rgb);
 	const float3 rawDiffuse = Mtl.LightPower * linearSampledColor;
-	//envLightComponent += rawDiffuse * gFC_HemAmbCol_u.rgb * AMBIENT_MULTIPLIER;
 	envLightComponent += rawDiffuse * CalcHemAmbient(Mtl.Normal) * AMBIENT_MULTIPLIER;
 
 	if (gFC_SAOEnabled != 0.0f) {
