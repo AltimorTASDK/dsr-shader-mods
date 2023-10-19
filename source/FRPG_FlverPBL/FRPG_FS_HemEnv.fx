@@ -222,11 +222,6 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	float3 specularAmbient = hemAmbient * (1.0f - AMBIENT_CUBEMAP_STRENGTH + specularLD * AMBIENT_CUBEMAP_STRENGTH);
 	envLightComponent += Mtl.SpecularColor * specularAmbient * AMBIENT_SPECULAR_MULTIPLIER;
 
-	if (gFC_SAOEnabled != 0.0f) {
-		const float aoMapVal = tex2Dlod(gSMP_AOMap, float4(In.VtxClp.xy * gFC_SAOParams.xy, 0, 0)).r;
-		envLightComponent *= aoMapVal;
-	}
-
 #if(POINT_LIGHT_0 >POINT_LIGHT_TYPE_None)
 	float3 pointLightComponent = CalcPointLightsLegacy(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapColor.a);
 #else
