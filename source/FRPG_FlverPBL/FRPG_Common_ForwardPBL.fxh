@@ -44,6 +44,7 @@
 #define CUBEMAP_POWER 1.75f
 #define AMBIENT_CUBEMAP_STRENGTH 0.5f
 #define AMBIENT_SPECULAR_MULTIPLIER 0.4f
+#define AMBIENT_SHADOW_STRENGTH 0.5f
 
 struct s_numLights {
 	uint offsetNum;

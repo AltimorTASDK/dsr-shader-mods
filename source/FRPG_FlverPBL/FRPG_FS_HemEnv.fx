@@ -215,7 +215,8 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 
 	//ambient diffuse
 	float3 hemAmbient = CalcHemAmbient(Mtl.Normal) * AMBIENT_MULTIPLIER;
-	envLightComponent += Mtl.DiffuseColor * hemAmbient;
+	float shadowFactor = 1.0f - AMBIENT_SHADOW_STRENGTH + lightmapColor.a * AMBIENT_SHADOW_STRENGTH;
+	envLightComponent += Mtl.DiffuseColor * shadowFactor * hemAmbient;
 
 	//ambient specular
 	float3 specularLD = CalcSpecularLD(Mtl.Normal, Mtl.Roughness);
