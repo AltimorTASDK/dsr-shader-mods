@@ -86,11 +86,8 @@ extern "C" void hook_copy_shader_params1();
 extern "C" void hook_copy_shader_params2();
 extern "C" void hook_copy_shader_params3();
 
-static DWORD apply_hooks(void *param)
+extern "C" void apply_hooks()
 {
-	// Wait to unpack
-	Sleep(1000);
-
 	auto *target1 = sigscan(
 		"DarkSoulsRemastered.exe",
 		// movaps xmm0, [rbp-0x60]
@@ -131,16 +128,19 @@ static DWORD apply_hooks(void *param)
 		"xxxxxxxxxxxxxx");
 
 	apply_jmp_hook(target_light_scaling, hook_WhackAssLightScaling);
-
-	return 0;
 }
+
+extern "C" void hook_SteamAPI_Init();
 
 BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, void *reserved)
 {
 	if (reason != DLL_PROCESS_ATTACH)
 		return FALSE;
 
-	CreateThread(nullptr, 0, apply_hooks, nullptr, 0, nullptr);
+	// Hook SteamAPI_Init to immediately apply hooks after SteamStub unpacking
+	const auto steam_api64 = GetModuleHandle("steam_api64.dll");
+	auto *SteamAPI_Init = GetProcAddress(steam_api64, "SteamAPI_Init");
+	apply_call_hook(SteamAPI_Init, hook_SteamAPI_Init, 12);
 
 	return TRUE;
 }
