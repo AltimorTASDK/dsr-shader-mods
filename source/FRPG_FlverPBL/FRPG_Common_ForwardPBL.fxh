@@ -374,9 +374,9 @@ float3 CalcDiffuseLD()
 #ifdef WITH_EnvLerp
 	float3 dif1 = gFC_EnvDifMapMulCol.rgb;
 	float3 dif2 = gFC_EnvDifMapMulCol2.rgb;
-	return gFC_DifMapMultiplier * lerp(dif1, dif2, gFC_EnvDifMapMulCol2.a);
+	return lerp(dif1, dif2, gFC_EnvDifMapMulCol2.a);
 #else
-	return gFC_EnvDifMapMulCol.rgb * gFC_DifMapMultiplier;
+	return gFC_EnvDifMapMulCol.rgb;
 #endif
 }
 
