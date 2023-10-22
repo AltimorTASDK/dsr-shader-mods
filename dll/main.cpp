@@ -118,7 +118,7 @@ extern "C" void apply_hooks()
 
 	apply_call_hook(target3, hook_copy_shader_params3, 14);
 
-	auto* target_light_scaling = sigscan(
+	auto *target_light_scaling = sigscan(
 		"DarkSoulsRemastered.exe",
 		// mov [rsp+8], rbx
 		// push rdi
