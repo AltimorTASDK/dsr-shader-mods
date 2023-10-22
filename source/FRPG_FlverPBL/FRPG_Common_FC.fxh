@@ -421,6 +421,9 @@ UNIFORM_FLOAT4 gFC_WaterScreenOffset : FC_REG(c123);////////////////////////////
 #define gFC_DebugMaterialParams gFC_MaterialOverrideParams
 	float4 gFC_MaterialOverrideParams : FC_REG(c100);
 	float4 gFC_DebugPointLightParams : FC_REG(c101);
+	// x: m_dbgShowGBuffer
+	// y: m_dbgForceDiffuseMapChangeMode bits 0-1
+	//    m_dbgForceSpecularMapChangeMode bits 2-3
 	uint4 gFC_DebugDraw : FC_REG(c102);
 
 #endif //OLD_VERSION
