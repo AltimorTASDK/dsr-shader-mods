@@ -127,8 +127,10 @@
 	//!フラグメントシェーダ出力
 	struct GBUFFER_OUT
 	{
-		float4 GBuffer0 : SV_Target0;
-		float4 GBuffer1 : SV_Target1; //qloc: subsurface scattering strength. We don't seem to ever modify it so it might be a good idea to move it to the stencil
+		float4 LitColor : SV_Target0;
+		float4 Subsurface : SV_Target1; //qloc: subsurface scattering strength. We don't seem to ever modify it so it might be a good idea to move it to the stencil
+		float4 Normal : SV_Target2;
+		float4 Position : SV_Target3;
 	};
 	//!フラグメントシェーダ出力
 	struct FRAGMENT_OUT

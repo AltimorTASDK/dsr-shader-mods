@@ -60,11 +60,11 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	Mtl.SubsurfOpacity = 1.0f;
 
 	GBUFFER_OUT Out;
-	Out.GBuffer0.a = 1.0f;
+	Out.LitColor.a = 1.0f;
 #ifdef WITH_Glow
 	Mtl.LitColor.rgb = ReverseToneMap(Mtl.LitColor.rgb * gFC_ToneCorrectParams.x);
 #endif
-	return PackGBuffer(Out, Mtl);
+	return PackGBuffer(Out, In, Mtl);
 }
 
 #else //defined(WITH_MultiTexture) && !defined(WITH_SpecularMap)
@@ -110,7 +110,7 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	sampledColor = qlocDoAlphaTest(sampledColor);
 #endif //WITH_MultiTexture
 
-	Out.GBuffer0.a = saturate(sampledColor.a);
+	Out.LitColor.a = saturate(sampledColor.a);
 
 	//qloc: face is backwards, invert normal
 	if (!In.isFrontFace) {
@@ -273,7 +273,7 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 #ifdef WITH_Glow
 	Mtl.LitColor.rgb = ReverseToneMap(Mtl.LitColor.rgb * gFC_ToneCorrectParams.x);
 #endif
-	return PackGBuffer(Out, Mtl);
+	return PackGBuffer(Out, In, Mtl);
 }
 
 #endif //defined(WITH_MultiTexture) && !defined(WITH_SpecularMap)

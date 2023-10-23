@@ -116,41 +116,16 @@ struct MATERIAL
 	float LightPower;
 };
 
-GBUFFER_OUT PackGBuffer(GBUFFER_OUT Out, MATERIAL mtl)
+GBUFFER_OUT PackGBuffer(GBUFFER_OUT Out, VTX_OUT In, MATERIAL Mtl)
 {
-	float3 scatter;
-
-	switch (gFC_DebugDraw.x) {
-	default:
-	#ifdef FS_SUBSURF
-		scatter = float3(mtl.SubsurfStrength / 10.0f, 0, 0);
-	#else
-		scatter = float3(0, 0, 0);
-	#endif
-		break;
-	case 1:
-		scatter = mtl.LitColor.rgb;
-		break;
-	case 2:
-		scatter = Linear2srgb(mtl.DiffuseColor);
-		break;
-	case 3:
-		scatter = Linear2srgb(mtl.SpecularColor);
-		break;
-	case 4:
-		scatter = mtl.EmissiveColor;
-		break;
-	case 5:
-		scatter = mtl.Normal * 0.49804f + 0.49804f;
-		break;
-	case 6:
-		scatter = float3(mtl.Roughness, 0, 0);
-		break;
-	}
-
-	//light
-	Out.GBuffer0.rgb = mtl.LitColor.rgb;
-	Out.GBuffer1 = float4(scatter, 0);
+	Out.LitColor.rgb = Mtl.LitColor.rgb;
+#ifdef FS_SUBSURF
+	Out.Subsurface = float4(Mtl.SubsurfStrength / 10.0f, 0, 0, 0);
+#else
+	Out.Subsurface = float4(0, 0, 0, 0);
+#endif
+	Out.Normal = float4(Mtl.Normal, 0);
+	Out.Position = In.VtxWld;
 
 	return Out;
 }
