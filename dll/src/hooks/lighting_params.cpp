@@ -1,4 +1,4 @@
-#include "util.h"
+#include "util/memory.h"
 
 float *hook_WhackAssLightScaling(float *out, short *in, float alpha)
 {

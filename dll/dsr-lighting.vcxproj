@@ -136,19 +136,31 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <MASM Include="src\hooks\deferred_asm.asm" />
     <MASM Include="src\main_asm.asm">
       <FileType>Document</FileType>
     </MASM>
+    <ClCompile Include="src\hooks\deferred.cpp" />
     <ClCompile Include="src\hooks\lighting_params.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\util.cpp" />
+    <ClCompile Include="src\util\memory.cpp" />
   </ItemGroup>
   <ItemGroup>
     <MASM Include="src\hooks\lighting_params_asm.asm" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\hooks\lighting_params.h" />
-    <ClInclude Include="src\util.h" />
+    <ClInclude Include="src\FRPG\FrpgEntityFactory.h" />
+    <ClInclude Include="src\FRPG\FrpgRenderTextureEntity.h" />
+    <ClInclude Include="src\FRPG\FrpgUtil.h" />
+    <ClInclude Include="src\FRPG\RenderTargetManImp.h" />
+    <ClInclude Include="src\hooks\hooks.h" />
+    <ClInclude Include="src\util\logger.h" />
+    <ClInclude Include="src\util\math.h" />
+    <ClInclude Include="src\util\matrix.h" />
+    <ClInclude Include="src\util\memory.h" />
+    <ClInclude Include="src\util\meta.h" />
+    <ClInclude Include="src\util\operators.h" />
+    <ClInclude Include="src\util\vector.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

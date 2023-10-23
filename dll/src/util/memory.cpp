@@ -1,7 +1,6 @@
 #include <cstddef>
 #include <stdexcept>
 #include <tuple>
-
 #include <Windows.h>
 #include <Psapi.h>
 
@@ -18,7 +17,7 @@ std::tuple<std::byte*, std::byte*> get_module_bounds(const char *name)
 	return {start, end};
 }
 
-std::byte *sigscan(const char *name, const char *sig, const char *mask)
+std::byte *sigscan_impl(const char *name, const char *sig, const char *mask)
 {
 	auto [start, end] = get_module_bounds(name);
 	auto *last_scan = end - strlen(mask) + 1;
@@ -32,7 +31,7 @@ std::byte *sigscan(const char *name, const char *sig, const char *mask)
 		}
 	}
 
-	throw std::runtime_error("Signature not found");
+	return nullptr;
 }
 
 void apply_jmp_hook(void *target, const void *hook)

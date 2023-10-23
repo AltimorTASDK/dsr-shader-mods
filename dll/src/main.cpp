@@ -1,10 +1,10 @@
-#include "util.h"
-#include "hooks/lighting_params.h"
-
+#include "hooks/hooks.h"
+#include "util/memory.h"
 #include <Windows.h>
 
 extern "C" void apply_hooks()
 {
+	apply_hooks_deferred();
 	apply_hooks_lighting_params();
 }
 
