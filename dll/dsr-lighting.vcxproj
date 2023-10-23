@@ -149,6 +149,7 @@
     <MASM Include="src\hooks\lighting_params_asm.asm" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Dantelion2\HGCommandBuffer.h" />
     <ClInclude Include="src\FRPG\FrpgEntityFactory.h" />
     <ClInclude Include="src\FRPG\FrpgRenderTextureEntity.h" />
     <ClInclude Include="src\FRPG\FrpgUtil.h" />

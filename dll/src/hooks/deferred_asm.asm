@@ -15,6 +15,18 @@ hook_RenderTargetManImp PROC
         jmp     rcx
 hook_RenderTargetManImp ENDP
 
+EXTERN create_gbuffer_draw_plan: PROC
+
+PUBLIC hook_PrecompileCommonDrawPlans
+hook_PrecompileCommonDrawPlans PROC
+        sub     rsp, 28h
+        mov     edx, r8d
+        mov     r8d, ebx
+        call    create_gbuffer_draw_plan
+        add     rsp, 28h
+        ret
+hook_PrecompileCommonDrawPlans ENDP
+
 _TEXT ENDS
 
 END

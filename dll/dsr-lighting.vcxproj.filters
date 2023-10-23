@@ -76,5 +76,8 @@
     <ClInclude Include="src\FRPG\FrpgUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Dantelion2\HGCommandBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
