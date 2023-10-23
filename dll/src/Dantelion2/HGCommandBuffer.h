@@ -72,7 +72,7 @@ struct HGCommandBuffer {
 		buffer += sizeof(T);
 	}
 
-	void Write(auto... values) requires (sizeof...(values) > 1)
+	void Write(auto ...values) requires (sizeof...(values) > 1)
 	{
 		(Write(values), ...);
 	}
