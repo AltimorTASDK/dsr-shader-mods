@@ -13,7 +13,7 @@ struct FrpgEntityFactory {
 	void **vtable;
 	HgManUnknown *unknown;
 
-	inline DLHG::Entity_t NewRenderTexture(
+	DLHG::Entity_t NewRenderTexture(
 		int width, int height, int type, int miplevels,
 		const RenderTextureParams1 *params1, const RenderTextureParams2 *params2)
 	{
@@ -29,7 +29,7 @@ struct FrpgEntityFactory {
 		return func(this, width, height, type, miplevels, params1, params2);
 	}
 
-	inline DLHG::Entity_t NewTextureSurface(DLHG::Entity_t texture)
+	DLHG::Entity_t NewTextureSurface(DLHG::Entity_t texture)
 	{
 		using func_t = to_static_function_t<decltype(&FrpgEntityFactory::NewTextureSurface)>;
 

@@ -65,19 +65,19 @@ struct HGCommandBuffer {
 	char pad08[0x30 - 0x08];
 
 	template<typename T>
-	inline void Write(T value)
+	void Write(T value)
 	{
 		buffer = (std::byte*)((uintptr_t)(buffer + alignof(T) - 1) & ~(alignof(T) - 1));
 		*(T*)buffer = value;
 		buffer += sizeof(T);
 	}
 
-	inline void Write(auto... values) requires (sizeof...(values) > 1)
+	void Write(auto... values) requires (sizeof...(values) > 1)
 	{
 		(Write(values), ...);
 	}
 
-	inline void Begin(HGCommand command, Entity_t entity)
+	void Begin(HGCommand command, Entity_t entity)
 	{
 		using func_t = to_static_function_t<decltype(&HGCommandBuffer::Begin)>;
 
@@ -90,7 +90,7 @@ struct HGCommandBuffer {
 		return func(this, command, entity);
 	}
 
-	inline void End()
+	void End()
 	{
 		using func_t = to_static_function_t<decltype(&HGCommandBuffer::End)>;
 
@@ -103,7 +103,7 @@ struct HGCommandBuffer {
 		return func(this);
 	}
 
-	inline void AddTargetSurface(Entity_t draw_plan, int index, Entity_t surface)
+	void AddTargetSurface(Entity_t draw_plan, int index, Entity_t surface)
 	{
 		Begin(HGCommand::DrawPlan, draw_plan);
 		Write(HGDrawCommand::AddTargetSurface, index, surface);
