@@ -25,6 +25,11 @@
 #define		SHADOWMAP_SIZE			2048.0f//(1024.0f)	//
 #define		_ENABLE_SHADOW			(1)
 
+#define M_PI 3.1415926535897932384626433832795
+
+#define SOFT_SHADOW_WIDTH 0.01
+#define SOFT_SHADOW_SAMPLES 32
+
 //FRPG_Commonに移動//#define gSMP_ShadowMap	gSMP_7	//シャドウマップ用サンプラ
 
 
@@ -434,6 +439,51 @@ DECL_SHADOW_FUNC( GetShadowRate_PCF9  , 	__GetShadowRate_PCF9 )
 DECL_SHADOW_FUNC( GetShadowRate_PCF16 , 	__GetShadowRate_PCF16 )
 #endif
 
+	float2 VogelDiskSample(int index, float phi)
+	{
+		static const float goldenAngle = 2.4;
+		float r = sqrt(index + 0.5) / sqrt(SOFT_SHADOW_SAMPLES);
+		float theta = index * goldenAngle + phi;
+		return float2(r * cos(theta), r * sin(theta));
+	}
+
+	float NoisePhi(float2 uv)
+	{
+		return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453) * (2 * M_PI);
+	}
+
+	/*float CalcPenumbra(float4 litPosition, float noisePhi)
+	{
+		for (int i = 0; i < SOFT_SHADOW_SAMPLES; i++)
+		{
+			float2 uv = litPosition.xy + SOFT_SHADOW_WIDTH * VogelDiskSample(i, phi);
+		}
+	}*/
+
+	float3 GetShadowRateSoft_PCF16(float2 fragCoord, float4 litPosition, float normalShadow, float4 eyeVec = 0)
+	{
+		float3 rate = 1;
+		if( _ENABLE_SHADOW ) {
+			/*	視点からの距離(eyeVec.wに距離が入っている) */
+			float dist = eyeVec.w;
+			dist = saturate((gFC_ShadowMapParam.y - dist) * gFC_ShadowMapParam.z);
+
+			float fShadow = 0.0;
+			float noisePhi = NoisePhi(litPosition.xy);
+			float4 offsetPosition = litPosition;
+
+			for (int i = 0; i < SOFT_SHADOW_SAMPLES; i++) {
+				float2 offset = VogelDiskSample(i, noisePhi);
+				offsetPosition.xy = litPosition.xy + offset * SOFT_SHADOW_WIDTH * litPosition.w;
+				fShadow += __GetShadowRate_PCF16(offsetPosition);
+			}
+
+			fShadow = saturate(fShadow * (1.0 / SOFT_SHADOW_SAMPLES) + normalShadow);
+			rate = 1 - ((float3)dist) * gFC_ShadowColor.xyz * fShadow;
+		}
+		return rate;
+	}
+
 	float3	CalcGetShadowRate( float4 position_in_light, float3 normal, float4 eyeVec = 0)
 	{
 		float NdotL = dot( gFC_ShadowLightDir.xyz, normal);
@@ -448,11 +498,18 @@ DECL_SHADOW_FUNC( GetShadowRate_PCF16 , 	__GetShadowRate_PCF16 )
 //		return retVal;
 	}
 
+	float3 CalcGetShadowRateSoft(float2 fragCoord, float4 position_in_light, float3 normal, float4 eyeVec = 0)
+	{
+		float NdotL = dot( gFC_ShadowLightDir.xyz, normal);
+		float fShadow = (NdotL+gFC_ShadowMapParam.x) * gFC_ShadowMapParam.w; //gFC_ShadowMapParam.w　影を落とすモデルかどうか　1:おとす。0:落とさない
+		fShadow = saturate(fShadow);
+		return pow(abs(GetShadowRateSoft_PCF16(fragCoord, position_in_light, fShadow, eyeVec)), gFC_DebugPointLightParams.z);
+	}
 
 	//VertexShaderで　World空間での位置をShadowMap空間に変換する
 	//ジオメトリが一個のShadowMap空間完全含まれた時
 	//ClampのみはPIXELで行う
-	float3 CalcGetShadowRateLitSpace( float4 position_in_light, float3 normal, float4 eyeVec = 0)
+	float3 CalcGetShadowRateLitSpace(float2 fragCoord, float4 position_in_light, float3 normal, float4 eyeVec = 0)
 	{
 		float4 clamp_qloc_renamed = gFC_ShadowMapClamp0;
 		clamp_qloc_renamed *= position_in_light.w;
@@ -461,12 +518,12 @@ DECL_SHADOW_FUNC( GetShadowRate_PCF16 , 	__GetShadowRate_PCF16 )
 		position_in_light.xy -= (position_in_light.xy < clamp_qloc_renamed.xy)*position_in_light.w; //画面外に
 		position_in_light.xy += (position_in_light.xy > clamp_qloc_renamed.zw)*position_in_light.w;
 
-		return CalcGetShadowRate( position_in_light, normal, eyeVec);
+		return CalcGetShadowRateSoft(fragCoord, position_in_light, normal, eyeVec);
 	}
 
 
 	//PixelShaderで　PixelのWorld空間での位置をShadowMap空間に変換する Cascade
-	float3 CalcGetShadowRateWorldSpace( float4 worldspace_Pos, float3 normal, float4 eyeVec = 0)
+	float3 CalcGetShadowRateWorldSpace(float2 fragCoord, float4 worldspace_Pos, float3 normal, float4 eyeVec = 0)
 	{
 		float4x4 shadowMtx;
 
@@ -547,7 +604,7 @@ DECL_SHADOW_FUNC( GetShadowRate_PCF16 , 	__GetShadowRate_PCF16 )
 		position_in_light.xy -= (position_in_light.xy < clamp_qloc_renamed.xy)*position_in_light.w; //画面外に
 		position_in_light.xy += (position_in_light.xy > clamp_qloc_renamed.zw)*position_in_light.w;
 
-		return CalcGetShadowRate( position_in_light, normal, eyeVec);
+		return CalcGetShadowRateSoft(fragCoord, position_in_light, normal, eyeVec);
 	}
 
 

@@ -155,9 +155,9 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 			//light map + shadow map
 			const float4 lightMapVal = TexLightmap(lightmapUV);
 			#if WITH_ShadowMap == CalcLispPos_VS
-				const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxLit, In.VecNrm.xyz, In.VecEye).rgb;
+				const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxClp.xy, In.VtxLit, In.VecNrm.xyz, In.VecEye).rgb;
 			#else //WITH_ShadowMap == CalcLispPos_PS
-				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
+				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxClp.xy, In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
 			#endif
 			lightmapColor = shadowMapVal.rgb*lightMapVal.rgb*gFC_DebugPointLightParams.y;
 			shadowColor = lightMapVal.a*shadowMapVal.rgb;
@@ -171,9 +171,9 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 		#ifdef WITH_ShadowMap
 			//shadow map only
 			#if WITH_ShadowMap == CalcLispPos_VS
-				const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxLit, In.VecNrm.xyz, In.VecEye).rgb;
+				const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxClp.xy, In.VtxLit, In.VecNrm.xyz, In.VecEye).rgb;
 			#else //WITH_ShadowMap == CalcLispPos_PS
-				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
+				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxClp.xy, In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
 			#endif
 			lightmapColor = shadowMapVal;
 			shadowColor = shadowMapVal;
@@ -277,6 +277,7 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 #ifdef WITH_Glow
 	Mtl.LitColor.rgb = ReverseToneMap(Mtl.LitColor.rgb * gFC_ToneCorrectParams.x);
 #endif
+	Mtl.LitColor.rgb = hemAmbient * shadowColor;
 	return PackGBuffer(Out, In, Mtl);
 }
 
