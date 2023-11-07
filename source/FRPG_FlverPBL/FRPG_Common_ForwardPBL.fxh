@@ -38,13 +38,16 @@
 #define CLUSTER_COUNT_Y 8
 #define CLUSTER_COUNT_Z 24
 
-#define AMBIENT_MULTIPLIER 0.5f
+#define AMBIENT_FRONT_MULTIPLIER (2.0f/3.0f)
+#define AMBIENT_BACK_MULTIPLIER (1.0f/3.0f)
+#define AMBIENT_AVG_MULTIPLIER ((AMBIENT_FRONT_MULTIPLIER+AMBIENT_BACK_MULTIPLIER)*0.5f)
 #define ENV_SPECULAR_MULTIPLIER 0.4f
 #define ENV_DIFFUSE_MULTIPLIER 1.1f
 #define CUBEMAP_POWER 1.75f
 #define AMBIENT_CUBEMAP_STRENGTH 0.5f
 #define AMBIENT_SPECULAR_MULTIPLIER 0.4f
 #define AMBIENT_SHADOW_STRENGTH 0.5f
+#define PLAYER_LIGHT_SHADOW_STRENGTH 0.25f
 
 struct s_numLights {
 	uint offsetNum;
@@ -370,8 +373,10 @@ float3 CalcSpecularLD(float3 dominantR, float roughness)
 
 float3 CalcHemAmbient(float3 dominantN)
 {
-	float HemLerpRate = dominantN.y * 0.5f + 0.5f;
-	return lerp(gFC_HemAmbCol_d.xyz, gFC_HemAmbCol_u.xyz, HemLerpRate);
+	float halfLambert = pow(dot(dominantN, -gFC_ShadowLightDir.xyz) * 0.5f + 0.5f, 2);
+	const float3 ambientBack  = gFC_HemAmbCol_d.rgb * AMBIENT_BACK_MULTIPLIER;
+	const float3 ambientFront = gFC_HemAmbCol_u.rgb * AMBIENT_FRONT_MULTIPLIER;
+	return lerp(ambientBack, ambientFront, halfLambert);
 }
 
 // Approximates luminance from an RGB value
@@ -477,7 +482,7 @@ uint3 GetClusterCoords(float3 worldPos) {
 	return clusterCoords;
 }
 
-float3 CalcPointLightsLegacy(MATERIAL Mtl, float3 vertexNormal, float3 V, float3 worldPos, float specularF90, float lightmapShadow)
+float3 CalcPointLightsLegacy(MATERIAL Mtl, float3 vertexNormal, float3 V, float3 worldPos, float specularF90, float3 lightmapShadow)
 {
 	float3 pointLightComponent = float3(0.0f, 0.0f, 0.0f);
 
@@ -497,7 +502,7 @@ float3 CalcPointLightsLegacy(MATERIAL Mtl, float3 vertexNormal, float3 V, float3
 	return pointLightComponent;
 }
 
-float3 CalcPointLightsClustered(MATERIAL Mtl, float3 vertexNormal, float3 V, float3 worldPos, float specularF90, float lightmapShadow)
+float3 CalcPointLightsClustered(MATERIAL Mtl, float3 vertexNormal, float3 V, float3 worldPos, float specularF90, float3 lightmapShadow)
 {
 	float3 pointLightComponent = float3(0.0f, 0.0f, 0.0f);
 
@@ -523,7 +528,11 @@ float3 CalcPointLightsClustered(MATERIAL Mtl, float3 vertexNormal, float3 V, flo
 		float3 L = lightPosition.xyz - worldPos;
 		float distL = length(L);
 		if (distL < lightColor.w) {
-			float lightmapFactor = lerp(lightmapShadow, 1, attenuation);
+			if (lightID == 0) {
+				// Player light
+				attenuation = 1.0f - PLAYER_LIGHT_SHADOW_STRENGTH;
+			}
+			float3 lightmapFactor = lerp(lightmapShadow, 1, attenuation);
 			L /= distL;
 			pointLightComponent += PointLightContribution(Mtl.Normal, vertexNormal, L, V,
 				Mtl.DiffuseColor, Mtl.SpecularColor, specularF90,
@@ -571,7 +580,7 @@ float3 CalcEnvDirLight(MATERIAL Mtl, float4 lightVec, float4 lightCol, float3 ve
 	const float3 lightDirection = sunDot < sunCos ? normalize(sunCos * sunDirection + sunSin * tangent) : reflection;
 
 	// Expand the range of environment diffuse lighting to compensate for reduced ambient component
-	const float3 ambientAdjust = 1.0f + gFC_HemAmbCol_u.rgb * (1.0f - AMBIENT_MULTIPLIER);
+	const float3 ambientAdjust = 1.0f + gFC_HemAmbCol_u.rgb * (1.0f - AMBIENT_AVG_MULTIPLIER);
 
 	const float horizonFade = CalcSpecularHorizonFade(vertexNormal, lightDirection);
 	const float3 dominantR = getSpecularDominantDir_forLightProbe(Mtl.Normal, reflection, Mtl.Roughness);

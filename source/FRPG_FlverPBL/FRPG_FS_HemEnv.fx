@@ -142,7 +142,8 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 		#endif
 	}
 
-	float4 lightmapColor = 1.0f; // used for shadowing static map point lights
+	float3 lightmapColor = 1.0f; // combined lightmap + shadow map
+	float3 shadowColor = 1.0f; // shadows only
 	{//lightmap and shadowmap
 	#ifdef WITH_LightMap
 		#ifdef WITH_MultiTexture
@@ -158,11 +159,13 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 			#else //WITH_ShadowMap == CalcLispPos_PS
 				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
 			#endif
-			lightmapColor.rgb = shadowMapVal.rgb*lightMapVal.rgb*gFC_DebugPointLightParams.y;
-			lightmapColor.a = lightMapVal.a*shadowMapVal.r; //QLOC: store shadowing from shadow map too
+			lightmapColor = shadowMapVal.rgb*lightMapVal.rgb*gFC_DebugPointLightParams.y;
+			shadowColor = lightMapVal.a*shadowMapVal.rgb;
 		#else
 			//light map only
-			lightmapColor = TexLightmap(lightmapUV) * float4(gFC_DebugPointLightParams.y, gFC_DebugPointLightParams.y, gFC_DebugPointLightParams.y, 1);
+			const float4 lightMapVal = TexLightmap(lightmapUV);
+			lightmapColor = lightMapVal.rgb*gFC_DebugPointLightParams.y;
+			shadowColor = lightMapVal.a;
 		#endif
 	#else
 		#ifdef WITH_ShadowMap
@@ -172,7 +175,8 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 			#else //WITH_ShadowMap == CalcLispPos_PS
 				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
 			#endif
-			lightmapColor.rgb = shadowMapVal.rgb;
+			lightmapColor = shadowMapVal;
+			shadowColor = shadowMapVal;
 		#endif
 	#endif
 	}
@@ -208,25 +212,25 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	float3 envLightComponent = float3(0, 0, 0);
 
 	for (uint i = 0; i < 3; i++) {
-		envLightComponent += CalcEnvDirLight(Mtl, gFC_DirLightVec[i], gFC_DirLightCol[i], vertexNormal, In.VecEye.xyz, specularF90, lightmapColor.rgb);
+		envLightComponent += CalcEnvDirLight(Mtl, gFC_DirLightVec[i], gFC_DirLightCol[i], vertexNormal, In.VecEye.xyz, specularF90, lightmapColor);
 	}
 
 	envLightComponent += CalcEnvDirLightSpc(Mtl, gFC_SpcLightVec, gFC_SpcLightCol, vertexNormal, In.VecEye.xyz, specularF90);
 
 	//ambient diffuse
-	float3 hemAmbient = CalcHemAmbient(Mtl.Normal) * AMBIENT_MULTIPLIER;
-	float shadowFactor = 1.0f - AMBIENT_SHADOW_STRENGTH + lightmapColor.a * AMBIENT_SHADOW_STRENGTH;
+	float3 hemAmbient = CalcHemAmbient(Mtl.Normal);
+	float3 shadowFactor = lerp(1.0f, shadowColor, AMBIENT_SHADOW_STRENGTH);
 	envLightComponent += Mtl.DiffuseColor * shadowFactor * hemAmbient;
 
 	//ambient specular
 	float3 specularLD = CalcSpecularLD(Mtl.Normal, Mtl.Roughness);
-	float3 specularAmbient = hemAmbient * (1.0f - AMBIENT_CUBEMAP_STRENGTH + specularLD * AMBIENT_CUBEMAP_STRENGTH);
+	float3 specularAmbient = hemAmbient * lerp(1.0f, specularLD, AMBIENT_CUBEMAP_STRENGTH);
 	envLightComponent += Mtl.SpecularColor * specularAmbient * AMBIENT_SPECULAR_MULTIPLIER;
 
 #if(POINT_LIGHT_0 >POINT_LIGHT_TYPE_None)
-	float3 pointLightComponent = CalcPointLightsLegacy(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapColor.a);
+	float3 pointLightComponent = CalcPointLightsLegacy(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90, shadowColor);
 #else
-	float3 pointLightComponent = CalcPointLightsClustered(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90, lightmapColor.a);
+	float3 pointLightComponent = CalcPointLightsClustered(Mtl, vertexNormal, In.VecEye.xyz, In.VtxWld.xyz, specularF90, shadowColor);
 #endif
 
 	{//Ghost lights
