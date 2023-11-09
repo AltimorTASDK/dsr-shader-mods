@@ -143,7 +143,8 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	}
 
 	float3 lightmapColor = 1.0f; // combined lightmap + shadow map
-	float3 shadowColor = 1.0f; // shadows only
+	float3 shadowColor = 1.0f; // soft shadows only
+
 	{//lightmap and shadowmap
 	#ifdef WITH_LightMap
 		#ifdef WITH_MultiTexture
@@ -154,17 +155,20 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 		#ifdef WITH_ShadowMap
 			//light map + shadow map
 			const float4 lightMapVal = TexLightmap(lightmapUV);
+			const float penumbraBias = lerp(SOFT_SHADOW_AMBIENT_PENUMBRA, 0.0, CalcLuminance(lightMapVal.rgb));
 			#if WITH_ShadowMap == CalcLispPos_VS
-				const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxClp.xy, In.VtxLit, In.VecNrm.xyz, In.VecEye).rgb;
+				const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxClp.xy, In.VtxLit, In.VecNrm.xyz, In.VecEye, penumbraBias).rgb;
+				const float3 softShadowMapVal = CalcGetShadowRateLitSpace(In.VtxClp.xy, In.VtxLit, In.VecNrm.xyz, In.VecEye, SOFT_SHADOW_AMBIENT_PENUMBRA).rgb;
 			#else //WITH_ShadowMap == CalcLispPos_PS
-				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxClp.xy, In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
+				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxClp.xy, In.VtxWld, In.VecNrm.xyz, In.VecEye, penumbraBias).rgb;
+				const float3 softShadowMapVal = CalcGetShadowRateWorldSpace(In.VtxClp.xy, In.VtxWld, In.VecNrm.xyz, In.VecEye, SOFT_SHADOW_AMBIENT_PENUMBRA).rgb;
 			#endif
-			lightmapColor = shadowMapVal.rgb*lightMapVal.rgb*gFC_DebugPointLightParams.y;
-			shadowColor = lightMapVal.a*shadowMapVal.rgb;
+			lightmapColor = shadowMapVal * lightMapVal.rgb * gFC_DebugPointLightParams.y;
+			shadowColor = lightMapVal.a * softShadowMapVal.rgb;
 		#else
 			//light map only
 			const float4 lightMapVal = TexLightmap(lightmapUV);
-			lightmapColor = lightMapVal.rgb*gFC_DebugPointLightParams.y;
+			lightmapColor = lightMapVal.rgb * gFC_DebugPointLightParams.y;
 			shadowColor = lightMapVal.a;
 		#endif
 	#else
@@ -172,11 +176,13 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 			//shadow map only
 			#if WITH_ShadowMap == CalcLispPos_VS
 				const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxClp.xy, In.VtxLit, In.VecNrm.xyz, In.VecEye).rgb;
+				const float3 softShadowMapVal = CalcGetShadowRateLitSpace(In.VtxClp.xy, In.VtxLit, In.VecNrm.xyz, In.VecEye, SOFT_SHADOW_AMBIENT_PENUMBRA).rgb;
 			#else //WITH_ShadowMap == CalcLispPos_PS
 				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxClp.xy, In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
+				const float3 softShadowMapVal = CalcGetShadowRateWorldSpace(In.VtxClp.xy, In.VtxWld, In.VecNrm.xyz, In.VecEye, SOFT_SHADOW_AMBIENT_PENUMBRA).rgb;
 			#endif
 			lightmapColor = shadowMapVal;
-			shadowColor = shadowMapVal;
+			shadowColor = softShadowMapVal;
 		#endif
 	#endif
 	}
@@ -277,7 +283,6 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 #ifdef WITH_Glow
 	Mtl.LitColor.rgb = ReverseToneMap(Mtl.LitColor.rgb * gFC_ToneCorrectParams.x);
 #endif
-	Mtl.LitColor.rgb = hemAmbient * shadowColor;
 	return PackGBuffer(Out, In, Mtl);
 }
 
