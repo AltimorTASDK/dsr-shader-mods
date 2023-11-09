@@ -23,7 +23,7 @@
 
 #define M_PI 3.1415926535897932384626433832795
 
-#define SOFT_SHADOW_WIDTH 0.01
+#define SOFT_SHADOW_WIDTH 0.1
 #define SOFT_SHADOW_SAMPLES 32
 
 // FRPG_Commonに移動//#define gSMP_ShadowMap	gSMP_7	//シャドウマップ用サンプラ
@@ -77,41 +77,50 @@ float NoisePhi(float2 uv)
 	return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453) * (2 * M_PI);
 }
 
-/*float CalcPenumbra(float4 litPosition, float noisePhi)
+/*float CalcPenumbra(float4 lightSpacePosition, float noisePhi)
 {
         for (int i = 0; i < SOFT_SHADOW_SAMPLES; i++)
         {
-                float2 uv = litPosition.xy + SOFT_SHADOW_WIDTH * VogelDiskSample(i, phi);
+                float2 uv = lightSpacePosition.xy + SOFT_SHADOW_WIDTH * VogelDiskSample(i, phi);
         }
 }*/
 
-float3 GetShadowRate_PCF16(float2 fragCoord, float4 litPosition, float normalShadow, float4 eyeVec = 0)
+float3 GetShadowRate_PCF16(float2 fragCoord, float4 lispPosition, float4x4 shadowMtx, float4 shadowClamp, float normalShadow, float4 eyeVec = 0)
 {
 	/* 視点からの距離(eyeVec.wに距離が入っている) */
-	float dist = eyeVec.w;
-	dist = saturate((gFC_ShadowMapParam.y - dist) * gFC_ShadowMapParam.z);
-
+	float dist = saturate((gFC_ShadowMapParam.y - eyeVec.w) * gFC_ShadowMapParam.z);
 	float fShadow = 0.0;
-	float noisePhi = NoisePhi(litPosition.xy);
-	float4 offsetPosition = litPosition;
+	float noisePhi = NoisePhi(fragCoord.xy);
+
+	float4x4 lightMatrix = DirectionMatrix(gFC_ShadowLightDir.xyz);
+	float4x4 lispToLightMatrix = mul(MatrixInverse(shadowMtx), lightMatrix);
+	float4x4 lightToLispMatrix = mul(MatrixInverse(lightMatrix), shadowMtx);
+
+	float4 lightSpacePosition = mul(lispPosition, lispToLightMatrix);
 
 	for (int i = 0; i < SOFT_SHADOW_SAMPLES; i++) {
 		float2 offset = VogelDiskSample(i, noisePhi);
-		offsetPosition.xy = litPosition.xy + offset * SOFT_SHADOW_WIDTH * litPosition.w;
-		fShadow += __GetShadowRate_PCF16(offsetPosition);
+		float4 offsetPosition = lightSpacePosition + float4(offset * SOFT_SHADOW_WIDTH, 0, 0);
+		float4 offsetLispPosition = mul(offsetPosition, lightToLispMatrix);
+
+		// Clamp
+		offsetLispPosition.xy -= (offsetLispPosition.xy < shadowClamp.xy) * offsetLispPosition.w;
+		offsetLispPosition.xy += (offsetLispPosition.xy > shadowClamp.zw) * offsetLispPosition.w;
+
+		fShadow += __GetShadowRate_PCF16(offsetLispPosition);
 	}
 
 	fShadow = saturate(fShadow * (1.0 / SOFT_SHADOW_SAMPLES) + normalShadow);
 	return 1 - gFC_ShadowColor.xyz * dist * fShadow;
 }
 
-float3 CalcGetShadowRate(float2 fragCoord, float4 position_in_light, float3 normal, float4 eyeVec = 0)
+float3 CalcGetShadowRate(float2 fragCoord, float4 position_in_light, float4x4 shadowMtx, float4 shadowClamp, float3 normal, float4 eyeVec = 0)
 {
 	float NdotL = dot(gFC_ShadowLightDir.xyz, normal);
 	// gFC_ShadowMapParam.w　影を落とすモデルかどうか　1:おとす。0:落とさない
 	float fShadow = (NdotL + gFC_ShadowMapParam.x) * gFC_ShadowMapParam.w;
 	fShadow = saturate(fShadow);
-	return pow(abs(GetShadowRate_PCF16(fragCoord, position_in_light, fShadow, eyeVec)), gFC_DebugPointLightParams.z);
+	return pow(abs(GetShadowRate_PCF16(fragCoord, position_in_light, shadowMtx, shadowClamp, fShadow, eyeVec)), gFC_DebugPointLightParams.z);
 }
 
 // VertexShaderで World空間での位置をShadowMap空間に変換する
@@ -119,14 +128,8 @@ float3 CalcGetShadowRate(float2 fragCoord, float4 position_in_light, float3 norm
 // ClampのみはPIXELで行う
 float3 CalcGetShadowRateLitSpace(float2 fragCoord, float4 position_in_light, float3 normal, float4 eyeVec = 0)
 {
-	float4 clamp_qloc_renamed = gFC_ShadowMapClamp0;
-	clamp_qloc_renamed *= position_in_light.w;
-
-	// Clamp
-	position_in_light.xy -= (position_in_light.xy < clamp_qloc_renamed.xy) * position_in_light.w; // 画面外に
-	position_in_light.xy += (position_in_light.xy > clamp_qloc_renamed.zw) * position_in_light.w;
-
-	return CalcGetShadowRate(fragCoord, position_in_light, normal, eyeVec);
+	float4 clamp_qloc_renamed = gFC_ShadowMapClamp0 * position_in_light.w;
+	return CalcGetShadowRate(fragCoord, position_in_light, gFC_ShadowMapMtxArray0, clamp_qloc_renamed, normal, eyeVec);
 }
 
 // PixelShaderで PixelのWorld空間での位置をShadowMap空間に変換する Cascade
@@ -159,11 +162,7 @@ float3 CalcGetShadowRateWorldSpace(float2 fragCoord, float4 worldspace_Pos, floa
 
 	clamp_qloc_renamed *= position_in_light.w;
 
-	// Clamp
-	position_in_light.xy -= (position_in_light.xy < clamp_qloc_renamed.xy) * position_in_light.w; // 画面外に
-	position_in_light.xy += (position_in_light.xy > clamp_qloc_renamed.zw) * position_in_light.w;
-
-	return CalcGetShadowRate(fragCoord, position_in_light, normal, eyeVec);
+	return CalcGetShadowRate(fragCoord, position_in_light, shadowMtx, clamp_qloc_renamed, normal, eyeVec);
 }
 
 // PixelShaderで PixelのWorld空間での位置をShadowMap空間に変換する NoCascade
@@ -176,11 +175,7 @@ float3 CalcGetShadowRateWorldSpaceNoCsd(float2 fragCoord, float4 worldspace_Pos,
 	float4 position_in_light = mul(worldPos, gFC_ShadowMapMtxArray0);
 	float4 clamp_qloc_renamed = gFC_ShadowMapClamp0 * position_in_light.w;
 
-	// Clamp
-	position_in_light.xy -= (position_in_light.xy < clamp_qloc_renamed.xy) * position_in_light.w; // 画面外に
-	position_in_light.xy += (position_in_light.xy > clamp_qloc_renamed.zw) * position_in_light.w;
-
-	return CalcGetShadowRate(fragCoord, position_in_light, normal, eyeVec);
+	return CalcGetShadowRate(fragCoord, position_in_light, gFC_ShadowMapMtxArray0, clamp_qloc_renamed, normal, eyeVec);
 }
 
 #endif //___FRPG_Shader_FRPG_ShadowFunc_fxh___
