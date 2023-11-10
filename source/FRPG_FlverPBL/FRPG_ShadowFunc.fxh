@@ -70,8 +70,7 @@ float3 GetShadowRate(
 	/* 視点からの距離(eyeVec.wに距離が入っている) */
 	float dist = saturate((gFC_ShadowMapParam.y - eyeVec.w) * gFC_ShadowMapParam.z);
 	float noisePhi = NoisePhi(fragCoord.xy);
-	//float penumbra = max(penumbraBias, SOFT_SHADOW_MIN_PENUMBRA);
-	float penumbra = SOFT_SHADOW_MIN_PENUMBRA;
+	float penumbra = max(penumbraBias, SOFT_SHADOW_MIN_PENUMBRA);
 
 	float4x4 worldToLightMatrix = DirectionMatrix(gFC_ShadowLightDir.xyz);
 	float4x4 lightToLispMatrix = mul(MatrixTranspose(worldToLightMatrix), shadowMtx);
