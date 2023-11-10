@@ -68,3 +68,11 @@ void apply_call_hook(void *target, const void *hook, size_t pad_size)
 
 	VirtualProtect(target, total_size, old_protect, &old_protect);
 }
+
+void patch_code(void *target, const void *patch, size_t size)
+{
+	DWORD old_protect;
+	VirtualProtect(target, size, PAGE_EXECUTE_READWRITE, &old_protect);
+	memcpy(target, patch, size);
+	VirtualProtect(target, size, old_protect, &old_protect);
+}

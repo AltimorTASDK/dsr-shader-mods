@@ -142,6 +142,7 @@
     </MASM>
     <ClCompile Include="src\hooks\deferred.cpp" />
     <ClCompile Include="src\hooks\lighting_params.cpp" />
+    <ClCompile Include="src\hooks\shadows.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\util\memory.cpp" />
   </ItemGroup>

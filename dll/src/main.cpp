@@ -6,6 +6,7 @@ extern "C" void apply_hooks()
 {
 	apply_hooks_deferred();
 	apply_hooks_lighting_params();
+	apply_hooks_shadows();
 }
 
 extern "C" void hook_SteamAPI_Init();
