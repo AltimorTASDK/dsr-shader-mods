@@ -110,8 +110,8 @@ float3 GetShadowRate_PCF16(
 
 	float2 clampTest = (lispPosition.xy > shadowClamp.zw) - (lispPosition.xy < shadowClamp.xy);
 	float2 clampOffset = clampTest * lispPosition.w;
-	float2 clampMin = shadowClamp.xy + float2(1, 1) / SHADOWMAP_SIZE * lispPosition.w;
-	float2 clampMax = shadowClamp.zw - float2(1, 1) / SHADOWMAP_SIZE * lispPosition.w;
+	float2 clampMin = shadowClamp.xy + (1.0 / SHADOWMAP_SIZE).xx * lispPosition.w;
+	float2 clampMax = shadowClamp.zw - (1.0 / SHADOWMAP_SIZE).xx * lispPosition.w;
 
 	for (int i = 0; i < SOFT_SHADOW_SAMPLES; i++) {
 		float2 offset = VogelDiskSample(i, noisePhi);
