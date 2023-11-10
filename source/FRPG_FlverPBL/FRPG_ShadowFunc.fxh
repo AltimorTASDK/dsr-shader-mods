@@ -26,45 +26,16 @@
 #define SHADOWMAP_SIZE 2048.0
 
 #define SOFT_SHADOW_SAMPLES 32
+#define SOFT_SHADOW_MIN_PENUMBRA 0.01
 #define SOFT_SHADOW_MAX_PENUMBRA 0.2
 #define SOFT_SHADOW_AMBIENT_PENUMBRA 0.2
 
 // FRPG_Commonに移動//#define gSMP_ShadowMap	gSMP_7	//シャドウマップ用サンプラ
 
-float DecodeDepthCmp(const float3 uvw, const int2 offset)
+float __GetShadowRate(const float4 lispPosition)
 {
-	return gSMP_ShadowMap.SampleCmp(gSMP_ShadowMapSampler, uvw.xy, uvw.z, offset).x;
-}
-
-float __GetShadowRate_PCF16(const float4 lispPosition)
-{
-	float retval = 0.0f;
-	const float3 vShadowCoord = lispPosition.xyz / lispPosition.w;
-	const float4 weight = 1.0f / 9.0f;
-	{
-		const float4 attenuation = float4(
-			DecodeDepthCmp(vShadowCoord, int2(-1, -1)),
-			DecodeDepthCmp(vShadowCoord, int2( 0, -1)),
-			DecodeDepthCmp(vShadowCoord, int2( 1, -1)),
-			DecodeDepthCmp(vShadowCoord, int2(-1,  0))
-		);
-		retval += dot(attenuation, weight);
-	}
-	{
-		const float4 attenuation = float4(
-			DecodeDepthCmp(vShadowCoord, int2( 0,  0)),
-			DecodeDepthCmp(vShadowCoord, int2( 1,  0)),
-			DecodeDepthCmp(vShadowCoord, int2(-1,  1)),
-			DecodeDepthCmp(vShadowCoord, int2( 0,  1)));
-		retval += dot(attenuation, weight);
-	}
-	{
-		const float attenuation = (
-			DecodeDepthCmp(vShadowCoord, int2( 1,  1)));
-		retval += attenuation * weight.x;
-	}
-
-	return retval;
+	const float3 uvw = lispPosition.xyz / lispPosition.w;
+	return gSMP_ShadowMap.SampleCmp(gSMP_ShadowMapSampler, uvw.xy, uvw.z).x;
 }
 
 float2 VogelDiskSample(int index, float phi)
@@ -88,7 +59,7 @@ float NoisePhi(float2 uv)
         }
 }*/
 
-float3 GetShadowRate_PCF16(
+float3 GetShadowRate(
 	float2 fragCoord,
 	float4 worldPosition,
 	float4 lispPosition,
@@ -100,10 +71,9 @@ float3 GetShadowRate_PCF16(
 {
 	/* 視点からの距離(eyeVec.wに距離が入っている) */
 	float dist = saturate((gFC_ShadowMapParam.y - eyeVec.w) * gFC_ShadowMapParam.z);
-	float fShadow = 0.0;
 	float noisePhi = NoisePhi(fragCoord.xy);
-	//float penumbra = penumbraBias;
-	float penumbra = 0.0;
+	//float penumbra = max(penumbraBias, SOFT_SHADOW_MIN_PENUMBRA);
+	float penumbra = SOFT_SHADOW_MIN_PENUMBRA;
 
 	float4x4 worldToLightMatrix = DirectionMatrix(gFC_ShadowLightDir.xyz);
 	float4x4 lightToLispMatrix = mul(MatrixTranspose(worldToLightMatrix), shadowMtx);
@@ -122,6 +92,8 @@ float3 GetShadowRate_PCF16(
 	float2 clampMin = shadowClamp.xy + (1.0 / SHADOWMAP_SIZE).xx * lispPosition.w;
 	float2 clampMax = shadowClamp.zw - (1.0 / SHADOWMAP_SIZE).xx * lispPosition.w;
 
+	float fShadow = normalShadow;
+
 	for (int i = 0; i < SOFT_SHADOW_SAMPLES; i += 4) {
 		float4x4 offsets = float4x4(
 			VogelDiskSample(i + 0, noisePhi), 0, 1,
@@ -136,15 +108,15 @@ float3 GetShadowRate_PCF16(
 		offsetPositions._m20_m21_m30_m31 = clamp(offsetPositions._m20_m21_m30_m31, clampMin.xyxy, clampMax.xyxy);
 
 		float4 samples = float4(
-			__GetShadowRate_PCF16(offsetPositions[0]),
-			__GetShadowRate_PCF16(offsetPositions[1]),
-			__GetShadowRate_PCF16(offsetPositions[2]),
-			__GetShadowRate_PCF16(offsetPositions[3]));
+			__GetShadowRate(offsetPositions[0]),
+			__GetShadowRate(offsetPositions[1]),
+			__GetShadowRate(offsetPositions[2]),
+			__GetShadowRate(offsetPositions[3]));
 
 		fShadow += dot(samples, 1.0 / SOFT_SHADOW_SAMPLES);
 	}
 
-	return 1 - gFC_ShadowColor.xyz * dist * saturate(fShadow + normalShadow);
+	return 1 - gFC_ShadowColor.xyz * dist * saturate(fShadow);
 }
 
 float3 CalcGetShadowRate(
@@ -160,7 +132,7 @@ float3 CalcGetShadowRate(
 	float NdotL = dot(gFC_ShadowLightDir.xyz, normal);
 	// gFC_ShadowMapParam.w　影を落とすモデルかどうか　1:おとす。0:落とさない
 	float fShadow = saturate((NdotL + gFC_ShadowMapParam.x) * gFC_ShadowMapParam.w);
-	float3 rate = GetShadowRate_PCF16(
+	float3 rate = GetShadowRate(
 		fragCoord,
 		worldPosition,
 		lispPosition,
@@ -180,6 +152,7 @@ float3 CalcGetShadowRateLitSpace(float2 fragCoord, float4 lispPosition, float3 n
 {
 	float4 shadowClamp = gFC_ShadowMapClamp0 * lispPosition.w;
 	float4 worldPosition = mul(lispPosition, MatrixInverse(gFC_ShadowMapMtxArray0));
+
 	return CalcGetShadowRate(
 		fragCoord,
 		worldPosition,
