@@ -155,7 +155,7 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 		#ifdef WITH_ShadowMap
 			//light map + shadow map
 			const float4 lightMapVal = TexLightmap(lightmapUV) * float4(gFC_DebugPointLightParams.yyy, 1);
-			const float penumbraBias = lerp(SOFT_SHADOW_AMBIENT_PENUMBRA, 0.0, CalcLuminance(lightMapVal.rgb));
+			const float penumbraBias = lerp(SOFT_SHADOW_AMBIENT_PENUMBRA, 0.0, saturate(CalcLuminance(lightMapVal.rgb)));
 			#if WITH_ShadowMap == CalcLispPos_VS
 				const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxClp.xy, In.VtxLit, In.VecNrm.xyz, In.VecEye, penumbraBias).rgb;
 				const float3 softShadowMapVal = CalcGetShadowRateLitSpace(In.VtxClp.xy, In.VtxLit, In.VecNrm.xyz, In.VecEye, SOFT_SHADOW_AMBIENT_PENUMBRA).rgb;
