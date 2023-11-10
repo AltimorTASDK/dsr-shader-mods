@@ -108,25 +108,42 @@ float3 GetShadowRate_PCF16(
 	float4x4 lightToLispMatrix = mul(MatrixInverse(lightMatrix), shadowMtx);
 	float4 lightSpacePosition = mul(lispPosition, lispToLightMatrix);
 
-	float2 clampTest = (lispPosition.xy > shadowClamp.zw) - (lispPosition.xy < shadowClamp.xy);
-	float2 clampOffset = clampTest * lispPosition.w;
+	float4x4 offsetToLightMatrix = float4x4(
+		penumbra, 0,        0,        0,
+		0,        penumbra, 0,        0,
+		0,        0,        penumbra, 0,
+		lightSpacePosition);
+
+	float4x4 offsetToLispMatrix = mul(offsetToLightMatrix, lightToLispMatrix);
+	// Add clamp offset in post-W divide space
+	offsetToLispMatrix[3].xy += (lispPosition.xy > shadowClamp.zw) - (lispPosition.xy < shadowClamp.xy);
+
 	float2 clampMin = shadowClamp.xy + (1.0 / SHADOWMAP_SIZE).xx * lispPosition.w;
 	float2 clampMax = shadowClamp.zw - (1.0 / SHADOWMAP_SIZE).xx * lispPosition.w;
 
-	for (int i = 0; i < SOFT_SHADOW_SAMPLES; i++) {
-		float2 offset = VogelDiskSample(i, noisePhi);
-		float4 offsetPosition = lightSpacePosition + float4(offset * penumbra, 0, 0);
-		float4 offsetLispPosition = mul(offsetPosition, lightToLispMatrix);
+	for (int i = 0; i < SOFT_SHADOW_SAMPLES; i += 4) {
+		float4x4 offsets = float4x4(
+			VogelDiskSample(i + 0, noisePhi), 0, 1,
+			VogelDiskSample(i + 1, noisePhi), 0, 1,
+			VogelDiskSample(i + 2, noisePhi), 0, 1,
+			VogelDiskSample(i + 3, noisePhi), 0, 1);
+
+		float4x4 offsetPositions = mul(offsets, offsetToLispMatrix);
 
 		// Clamp
-		offsetLispPosition.xy += clampOffset;
-		offsetLispPosition.xy = clamp(offsetLispPosition.xy, clampMin, clampMax);
+		offsetPositions._m00_m01_m10_m11 = clamp(offsetPositions._m00_m01_m10_m11, clampMin.xyxy, clampMax.xyxy);
+		offsetPositions._m20_m21_m30_m31 = clamp(offsetPositions._m20_m21_m30_m31, clampMin.xyxy, clampMax.xyxy);
 
-		fShadow += __GetShadowRate_PCF16(offsetLispPosition);
+		float4 samples = float4(
+			__GetShadowRate_PCF16(offsetPositions[0]),
+			__GetShadowRate_PCF16(offsetPositions[1]),
+			__GetShadowRate_PCF16(offsetPositions[2]),
+			__GetShadowRate_PCF16(offsetPositions[3]));
+
+		fShadow += dot(samples, 1.0 / SOFT_SHADOW_SAMPLES);
 	}
 
-	fShadow = saturate(fShadow * (1.0 / SOFT_SHADOW_SAMPLES) + normalShadow);
-	return 1 - gFC_ShadowColor.xyz * dist * fShadow;
+	return 1 - gFC_ShadowColor.xyz * dist * saturate(fShadow + normalShadow);
 }
 
 float3 CalcGetShadowRate(
