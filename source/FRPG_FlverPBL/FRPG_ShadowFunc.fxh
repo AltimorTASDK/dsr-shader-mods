@@ -26,7 +26,7 @@
 #define SHADOWMAP_SIZE 2048.0
 
 #define SOFT_SHADOW_SAMPLES 32
-#define SOFT_SHADOW_MIN_PENUMBRA 0.01
+#define SOFT_SHADOW_MIN_PENUMBRA 0.03
 #define SOFT_SHADOW_MAX_PENUMBRA 0.2
 #define SOFT_SHADOW_AMBIENT_PENUMBRA 0.2
 
@@ -86,8 +86,6 @@ float3 GetShadowRate(
 		lightSpacePosition);
 
 	float4x4 offsetToLispMatrix = mul(offsetToLightMatrix, lightToLispMatrix);
-	// Add clamp offset in post-W divide space
-	offsetToLispMatrix[3].xy += (lispPosition.xy > shadowClamp.zw) - (lispPosition.xy < shadowClamp.xy);
 
 	float2 clampMin = shadowClamp.xy + (1.0 / SHADOWMAP_SIZE).xx * lispPosition.w;
 	float2 clampMax = shadowClamp.zw - (1.0 / SHADOWMAP_SIZE).xx * lispPosition.w;
