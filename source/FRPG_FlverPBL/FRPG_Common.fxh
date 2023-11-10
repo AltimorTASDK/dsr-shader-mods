@@ -257,6 +257,15 @@ float4x4 DirectionMatrix(float3 forward)
 		0,       0,    0,         1);
 }
 
+float4x4 MatrixTranspose(float4x4 m)
+{
+	return float4x4(
+		m._m00_m10_m20_m30,
+		m._m01_m11_m21_m31,
+		m._m02_m12_m22_m32,
+		m._m03_m13_m23_m33);
+}
+
 /*-------------------------------------------------------------------*//*!
 @brief トーンマップ圧縮する
 @param[in] col カラー
