@@ -23,8 +23,6 @@
 
 #define M_PI 3.1415926535897932384626433832795
 
-#define SHADOWMAP_SIZE 2048.0
-
 #define SOFT_SHADOW_SAMPLES 32
 #define SOFT_SHADOW_MIN_PENUMBRA 0.03
 #define SOFT_SHADOW_MAX_PENUMBRA 0.2
@@ -87,9 +85,6 @@ float3 GetShadowRate(
 
 	float4x4 offsetToLispMatrix = mul(offsetToLightMatrix, lightToLispMatrix);
 
-	float2 clampMin = shadowClamp.xy + (1.0 / SHADOWMAP_SIZE).xx * lispPosition.w;
-	float2 clampMax = shadowClamp.zw - (1.0 / SHADOWMAP_SIZE).xx * lispPosition.w;
-
 	float fShadow = normalShadow;
 
 	for (int i = 0; i < SOFT_SHADOW_SAMPLES; i += 4) {
@@ -102,8 +97,8 @@ float3 GetShadowRate(
 		float4x4 offsetPositions = mul(offsets, offsetToLispMatrix);
 
 		// Clamp to cascade
-		offsetPositions._m00_m01_m10_m11 = clamp(offsetPositions._m00_m01_m10_m11, clampMin.xyxy, clampMax.xyxy);
-		offsetPositions._m20_m21_m30_m31 = clamp(offsetPositions._m20_m21_m30_m31, clampMin.xyxy, clampMax.xyxy);
+		offsetPositions._m00_m01_m10_m11 = clamp(offsetPositions._m00_m01_m10_m11, shadowClamp.xyxy, shadowClamp.zwzw);
+		offsetPositions._m20_m21_m30_m31 = clamp(offsetPositions._m20_m21_m30_m31, shadowClamp.xyxy, shadowClamp.zwzw);
 
 		float4 samples = float4(
 			__GetShadowRate(offsetPositions[0]),
