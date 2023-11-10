@@ -84,7 +84,7 @@ float3 GetShadowRate(
 
 	float4x4 offsetToLispMatrix = mul(offsetToLightMatrix, lightToLispMatrix);
 
-	float fShadow = normalShadow;
+	float shadow = normalShadow;
 
 	for (int i = 0; i < SOFT_SHADOW_SAMPLES; i += 4) {
 		float4x4 offsets = float4x4(
@@ -105,10 +105,10 @@ float3 GetShadowRate(
 			__GetShadowRate(offsetPositions[2]),
 			__GetShadowRate(offsetPositions[3]));
 
-		fShadow += dot(samples, 1.0 / SOFT_SHADOW_SAMPLES);
+		shadow += dot(samples, dist * (1.0 / SOFT_SHADOW_SAMPLES));
 	}
 
-	return 1 - gFC_ShadowColor.xyz * dist * saturate(fShadow);
+	return 1 - gFC_ShadowColor.xyz * saturate(shadow);
 }
 
 float3 CalcGetShadowRate(
@@ -124,6 +124,7 @@ float3 CalcGetShadowRate(
 	float NdotL = dot(gFC_ShadowLightDir.xyz, normal);
 	// gFC_ShadowMapParam.w　影を落とすモデルかどうか　1:おとす。0:落とさない
 	float fShadow = saturate((NdotL + gFC_ShadowMapParam.x) * gFC_ShadowMapParam.w);
+
 	float3 rate = GetShadowRate(
 		fragCoord,
 		worldPosition,
