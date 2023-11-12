@@ -151,6 +151,7 @@
     <MASM Include="src\hooks\lighting_params_asm.asm" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Dantelion2\DLDrawContext.h" />
     <ClInclude Include="src\Dantelion2\DLGfxReferenceCountObject.h" />
     <ClInclude Include="src\Dantelion2\DLGPUResource.h" />
     <ClInclude Include="src\Dantelion2\DLReferenceCountObject.h" />
@@ -158,6 +159,8 @@
     <ClInclude Include="src\Dantelion2\DLSamplerState11.h" />
     <ClInclude Include="src\Dantelion2\HeapAllocator.h" />
     <ClInclude Include="src\Dantelion2\HGCommandBuffer.h" />
+    <ClInclude Include="src\Dantelion2\HGDrawContext.h" />
+    <ClInclude Include="src\FRPG\FrpgDrawContext.h" />
     <ClInclude Include="src\FRPG\FrpgEntityFactory.h" />
     <ClInclude Include="src\FRPG\FrpgRenderTextureEntity.h" />
     <ClInclude Include="src\FRPG\FrpgUtil.h" />

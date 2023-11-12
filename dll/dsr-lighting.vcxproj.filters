@@ -103,5 +103,14 @@
     <ClInclude Include="src\Dantelion2\DLSamplerState11.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Dantelion2\DLDrawContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Dantelion2\HGDrawContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\FRPG\FrpgDrawContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

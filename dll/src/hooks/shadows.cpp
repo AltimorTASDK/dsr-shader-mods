@@ -1,5 +1,7 @@
 #include "Dantelion2/DLResourceManager.h"
 #include "Dantelion2/DLSamplerState11.h"
+#include "Dantelion2/HGDrawContext.h"
+#include "FRPG/FrpgDrawContext.h"
 #include "util/memory.h"
 
 // Non-comparison sampler for sampling depth values
@@ -19,7 +21,19 @@ extern "C" void create_shadow_map_sampler(DLGR::DLResourceManager *resource_mana
 	});
 }
 
-extern "C" void hook_AddShadowMapSampler();
+void hook_SetPSResourceToDFG(NS_FRPG::FrpgDrawContext *context, UINT slot)
+{
+	// We don't need the DFG texture, use it for the new shadow map sampler
+	auto *dl_context = context->dl_context;
+
+	if (dl_context->samplers[slot] != shadow_map_sampler) {
+		auto *sampler = shadow_map_sampler->d3d_sampler_state;
+		context->dl_context->d3d_context->PSSetSamplers(slot, 1, &sampler);
+		dl_context->samplers[slot] = shadow_map_sampler;
+	}
+}
+
+extern "C" void hook_add_shadow_map_sampler();
 
 void apply_hooks_shadows()
 {
@@ -43,10 +57,17 @@ void apply_hooks_shadows()
 	// jmp +0xB1
 	patch_code(target_vertex_lisp_model, "\xE9\xAC\x00\x00\x00\x90");
 
-	auto *target_AddShadowMapSampler = sigscan(
+	auto *target_add_shadow_map_sampler = sigscan(
 		// mov [r14+0x388], rsi
 		"\x49\x89\xB6\x88\x03\x00\x00",
 		"xxxxxxx");
 
-	apply_call_hook(target_AddShadowMapSampler, hook_AddShadowMapSampler, 14);
+	apply_call_hook(target_add_shadow_map_sampler, hook_add_shadow_map_sampler, 14);
+
+	auto *target_SetPSResourceToDFG = sigscan(
+		// mov rsi, [r8+0x310]
+		"\x49\x8B\xB0\x10\x03\x00\x00",
+		"xxxxxxx") - 0x36;
+
+	apply_jmp_hook(target_SetPSResourceToDFG, hook_SetPSResourceToDFG);
 }
