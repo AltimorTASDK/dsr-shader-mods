@@ -6,8 +6,7 @@
 namespace DLGR {
 
 struct DLGfxReferenceCountObject : DLUT::DLReferenceCountObject {
-	struct DLDrawDevice *device;
-	int unknown020;
+	DLKRD::HeapAllocator *allocator;
 };
 
 } // namespace DLGR
