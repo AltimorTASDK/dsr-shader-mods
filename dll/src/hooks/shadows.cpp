@@ -28,7 +28,7 @@ void hook_SetPSResourceToDFG(NS_FRPG::FrpgDrawContext *context, UINT slot)
 
 	if (dl_context->samplers[slot] != shadow_map_sampler) {
 		auto *sampler = shadow_map_sampler->d3d_sampler_state;
-		context->dl_context->d3d_context->PSSetSamplers(slot, 1, &sampler);
+		dl_context->d3d_context->PSSetSamplers(slot, 1, &sampler);
 		dl_context->samplers[slot] = shadow_map_sampler;
 	}
 }
