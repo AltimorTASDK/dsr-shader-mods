@@ -39,12 +39,18 @@ inline std::byte *sigscan(
 	return sigscan(nullptr, sig, mask, location);
 }
 
-inline const std::byte *read_rel32(const void *rel32)
+inline const std::byte *read_rel32(
+	const void *rel32, const std::source_location &location = std::source_location::current())
 {
-	return (const std::byte*)rel32 + *(int32_t*)rel32;
+	auto *result = (const std::byte*)rel32 + *(int32_t*)rel32 + 4;
+	logger.println(
+		"{}:{}: rel32 result: {:016X}",
+		base_file_name(location), location.line(), (uintptr_t)result);
+	return result;
 }
 
-inline std::byte *read_rel32(void *rel32)
+inline std::byte *read_rel32(
+	void *rel32, const std::source_location &location = std::source_location::current())
 {
-	return (std::byte*)rel32 + *(int32_t*)rel32;
+	return (std::byte*)read_rel32((const void*)rel32, location);
 }
