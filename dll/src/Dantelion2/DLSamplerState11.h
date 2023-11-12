@@ -46,9 +46,9 @@ struct DLSamplerState11 : DLGPUResource {
 		using func_t = void(*)(DLSamplerState11*, DLDrawDevice*, DLKRD::HeapAllocator*);
 
 		static auto *func = (func_t)(read_rel32(sigscan(
-			// mov [r14+0x388], rsi
-			"\x49\x89\xB6\x88\x03\x00\x00",
-			"xxxxxxx") - 0x21));
+			// mov [r14+0x2F8], rbx
+			"\x49\x89\x9E\xF8\x02\x00\x00",
+			"xxxxxxx") - 0x27));
 
 		func(this, device, allocator);
 	}
