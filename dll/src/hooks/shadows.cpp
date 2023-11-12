@@ -4,7 +4,7 @@
 #include "FRPG/FrpgDrawContext.h"
 #include "util/memory.h"
 
-// Non-comparison sampler for sampling depth values
+// Non-comparison sampler for reading depth values
 DLGR::DLSamplerState11 *shadow_map_sampler;
 
 extern "C" void create_shadow_map_sampler(DLGR::DLResourceManager *resource_manager)
