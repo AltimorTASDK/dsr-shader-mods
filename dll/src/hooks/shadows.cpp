@@ -23,7 +23,7 @@ extern "C" void hook_AddShadowMapSampler();
 
 void apply_hooks_shadows()
 {
-	auto *target_vertex_lisp_flver = sigscan(
+	auto *target_vertex_lisp_asm_model = sigscan(
 		// jz +0xB1
 		// movaps xmm0, [rsi+0x60]
 		"\x0F\x84\xAB\x00\x00\x00\x0F\x28\x46\x60",
@@ -31,9 +31,9 @@ void apply_hooks_shadows()
 
 	// Skip attempt to apply LiSP matrix in vertex shader
 	// jmp +0xB1
-	patch_code(target_vertex_lisp_flver, "\xE9\xAC\x00\x00\x00\x90");
+	patch_code(target_vertex_lisp_asm_model, "\xE9\xAC\x00\x00\x00\x90");
 
-	auto *target_vertex_lisp_fgflver = sigscan(
+	auto *target_vertex_lisp_model = sigscan(
 		// jz +0xB1
 		// movaps xmm0, [r13+0x60]
 		"\x0F\x84\xAB\x00\x00\x00\x41\x0F\x28\x45\x60",
@@ -41,7 +41,7 @@ void apply_hooks_shadows()
 
 	// Skip attempt to apply LiSP matrix in vertex shader
 	// jmp +0xB1
-	patch_code(target_vertex_lisp_fgflver, "\xE9\xAC\x00\x00\x00\x90");
+	patch_code(target_vertex_lisp_model, "\xE9\xAC\x00\x00\x00\x90");
 
 	auto *target_AddShadowMapSampler = sigscan(
 		// mov [r14+0x388], rsi
