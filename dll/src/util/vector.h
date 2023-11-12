@@ -267,9 +267,6 @@ template<typename T>
 struct color_rgb_base : color_util<T> {
 	using color_util<T>::max_value;
 
-	static constexpr vec_impl<color_rgb_base> white =
-		{ max_value, max_value, max_value };
-
 	T r, g, b;
 	constexpr auto elems()       { return std::tie(r, g, b); }
 	constexpr auto elems() const { return std::make_tuple(r, g, b); }
@@ -281,9 +278,6 @@ using color_rgb_f32 = vec_impl<color_rgb_base<float>>;
 template<typename T>
 struct color_rgba_base : color_util<T> {
 	using color_util<T>::max_value;
-
-	static constexpr vec_impl<color_rgba_base> white =
-		{ max_value, max_value, max_value, max_value };
 
 	static constexpr auto hex(uint32_t value)
 	{

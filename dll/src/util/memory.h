@@ -38,3 +38,13 @@ inline std::byte *sigscan(
 {
 	return sigscan(nullptr, sig, mask, location);
 }
+
+inline const std::byte *read_rel32(const void *rel32)
+{
+	return (const std::byte*)rel32 + *(int32_t*)rel32;
+}
+
+inline std::byte *read_rel32(void *rel32)
+{
+	return (std::byte*)rel32 + *(int32_t*)rel32;
+}
