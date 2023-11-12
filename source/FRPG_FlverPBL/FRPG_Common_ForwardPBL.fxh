@@ -25,8 +25,6 @@
 #define LAMP_FALLOFF_PERCEIVED_LINEAR 3
 #define LAMP_FALLOFF_FIXED_LINEAR 4
 
-#define DFG_TEXTURE_SIZE 128.0f
-
 #define gFC_DifMapMultiplier gFC_LightProbeParam.x
 #define gFC_SpcMapMultiplier gFC_LightProbeParam.x
 #define gFC_LightProbeMipCount gFC_LightProbeParam.w
@@ -291,17 +289,6 @@ float3 getDiffuseDominantDir_forLightProbe(float3 N, float3 V, float NdotV, floa
 	return lerp(N, V, lerpFactor);
 }
 
-float CalcDiffuseFresnel(float NdotV, float roughness)
-{
-	return 0.04f;
-	return tex2Dlod(gSMP_DFG, float4(roughness, NdotV, 0, 0)).z;
-}
-
-float2 CalcSpecularDFG(float NdotV, float roughness)
-{
-	return tex2Dlod(gSMP_DFG, float4(roughness, NdotV, 0, 0)).xy;
-}
-
 static const float c1 = 0.429043;
 static const float c2 = 0.511664;
 static const float c3 = 0.743125;
@@ -394,31 +381,6 @@ float3 evaluateIBLDiffuse(float3 N, float3 V, float NdotV, float roughness)
 	float3 diffuseLighting = CalcDiffuseLD(N);
 
 	return diffuseLighting;
-}
-
-float3 evaluateIBLSpecular(float3 N, float3 R, float3 vertexNormal, float NdotV, float roughness, float3 f0, float3 f90)
-{
-	float3 dominantR = getSpecularDominantDir_forLightProbe(N, R, roughness);
-
-	// Rebuild the function
-	// L . D. ( f0.Gv.(1-Fc) + Gv.Fc ) . cosTheta / (4 . NdotL . NdotV)
-	float3 preLD = CalcSpecularLD(dominantR, roughness);
-
-	// Horizon fading trick from http://marmosetco.tumblr.com/post/81245981087
-	float ndl = dot(vertexNormal, R);
-	const float horizonFade = 1.3;
-	float horiz = clamp(1.0 + horizonFade * ndl, 0.0, 1.0);
-	horiz *= horiz;
-	preLD *= horiz;
-
-	// Sample pre-integrate DFG
-	// Fc = (1-H.L)^5
-	// PreIntegratedDFG.r = Gv.(1-Fc)
-	// PreIntegratedDFG.g = Gv.Fc
-	float2 preDFG = CalcSpecularDFG(NdotV, roughness);
-
-	// LD . ( f0.Gv.(1-Fc) + Gv.Fc.f90 )
-	return preLD * (f0 * preDFG.x + f90 * preDFG.y);
 }
 
 // thicknessSqrt is sqrt(mesh thickness)
