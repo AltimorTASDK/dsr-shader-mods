@@ -85,6 +85,8 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	float2 difTexUV = In.TexDif.xy;
 #endif
 
+	float2 fragCoord = In.VtxClp.xy * gFC_SAOParams.xy;
+
 	{//xyz - view vector, w - camera distance
 		In.VecEye = CalcGetVecEye_FS(In.VecEye);
 	}
@@ -157,11 +159,11 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 			const float4 lightMapVal = TexLightmap(lightmapUV) * float4(gFC_DebugPointLightParams.yyy, 1);
 			const float penumbraBias = lerp(SOFT_SHADOW_AMBIENT_PENUMBRA, 0.0, saturate(CalcLuminance(lightMapVal.rgb)));
 			#if WITH_ShadowMap == CalcLispPos_VS
-				const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxClp.xy, In.VtxLit, In.VecNrm.xyz, In.VecEye, penumbraBias).rgb;
-				const float3 softShadowMapVal = CalcGetShadowRateLitSpace(In.VtxClp.xy, In.VtxLit, In.VecNrm.xyz, In.VecEye, SOFT_SHADOW_AMBIENT_PENUMBRA).rgb;
+				const float3 shadowMapVal = CalcGetShadowRateLitSpace(fragCoord, In.VtxLit, In.VecNrm.xyz, In.VecEye, penumbraBias).rgb;
+				const float3 softShadowMapVal = CalcGetShadowRateLitSpace(fragCoord, In.VtxLit, In.VecNrm.xyz, In.VecEye, SOFT_SHADOW_AMBIENT_PENUMBRA).rgb;
 			#else //WITH_ShadowMap == CalcLispPos_PS
-				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxClp.xy, In.VtxWld, In.VecNrm.xyz, In.VecEye, penumbraBias).rgb;
-				const float3 softShadowMapVal = CalcGetShadowRateWorldSpace(In.VtxClp.xy, In.VtxWld, In.VecNrm.xyz, In.VecEye, SOFT_SHADOW_AMBIENT_PENUMBRA).rgb;
+				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(fragCoord, In.VtxWld, In.VecNrm.xyz, In.VecEye, penumbraBias).rgb;
+				const float3 softShadowMapVal = CalcGetShadowRateWorldSpace(fragCoord, In.VtxWld, In.VecNrm.xyz, In.VecEye, SOFT_SHADOW_AMBIENT_PENUMBRA).rgb;
 			#endif
 			lightmapColor = shadowMapVal * lightMapVal.rgb;
 			shadowColor = lightMapVal.a * softShadowMapVal.rgb;
@@ -175,11 +177,11 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 		#ifdef WITH_ShadowMap
 			//shadow map only
 			#if WITH_ShadowMap == CalcLispPos_VS
-				const float3 shadowMapVal = CalcGetShadowRateLitSpace(In.VtxClp.xy, In.VtxLit, In.VecNrm.xyz, In.VecEye).rgb;
-				const float3 softShadowMapVal = CalcGetShadowRateLitSpace(In.VtxClp.xy, In.VtxLit, In.VecNrm.xyz, In.VecEye, SOFT_SHADOW_AMBIENT_PENUMBRA).rgb;
+				const float3 shadowMapVal = CalcGetShadowRateLitSpace(fragCoord, In.VtxLit, In.VecNrm.xyz, In.VecEye).rgb;
+				const float3 softShadowMapVal = CalcGetShadowRateLitSpace(fragCoord, In.VtxLit, In.VecNrm.xyz, In.VecEye, SOFT_SHADOW_AMBIENT_PENUMBRA).rgb;
 			#else //WITH_ShadowMap == CalcLispPos_PS
-				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(In.VtxClp.xy, In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
-				const float3 softShadowMapVal = CalcGetShadowRateWorldSpace(In.VtxClp.xy, In.VtxWld, In.VecNrm.xyz, In.VecEye, SOFT_SHADOW_AMBIENT_PENUMBRA).rgb;
+				const float3 shadowMapVal = CalcGetShadowRateWorldSpace(fragCoord, In.VtxWld, In.VecNrm.xyz, In.VecEye).rgb;
+				const float3 softShadowMapVal = CalcGetShadowRateWorldSpace(fragCoord, In.VtxWld, In.VecNrm.xyz, In.VecEye, SOFT_SHADOW_AMBIENT_PENUMBRA).rgb;
 			#endif
 			lightmapColor = shadowMapVal;
 			shadowColor = softShadowMapVal;
@@ -255,7 +257,7 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	float3 lightComponent = envLightComponent + pointLightComponent;
 
 	if (gFC_SAOEnabled != 0.0f) {
-		const float aoMapVal = tex2Dlod(gSMP_AOMap, float4(In.VtxClp.xy * gFC_SAOParams.xy, 0, 0)).r;
+		const float aoMapVal = tex2Dlod(gSMP_AOMap, float4(fragCoord, 0, 0)).r;
 		lightComponent *= aoMapVal;
 	}
 
