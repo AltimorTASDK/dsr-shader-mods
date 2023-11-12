@@ -27,13 +27,20 @@
 #define SOFT_SHADOW_MIN_PENUMBRA 0.03
 #define SOFT_SHADOW_MAX_PENUMBRA 0.2
 #define SOFT_SHADOW_AMBIENT_PENUMBRA 0.2
+#define SOFT_SHADOW_PENUMBRA_FACTOR 1.0
 
 // FRPG_Commonに移動//#define gSMP_ShadowMap	gSMP_7	//シャドウマップ用サンプラ
 
-float __GetShadowRate(const float4 lispPosition)
+float GetShadowMapCompare(const float4 lispPosition)
 {
 	const float3 uvw = lispPosition.xyz / lispPosition.w;
 	return gSMP_ShadowMap.SampleCmp(gSMP_ShadowMapSampler, uvw.xy, uvw.z).x;
+}
+
+float GetShadowMapZ(const float4 lispPosition)
+{
+	const float3 uvw = lispPosition.xyz / lispPosition.w;
+	return gSMP_ShadowMap.Sample(gSMP_ShadowMapReadSampler, uvw.xy).x;
 }
 
 float2 VogelDiskSample(int index, float phi)
@@ -49,34 +56,100 @@ float NoisePhi(float2 uv)
 	return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453) * (2 * M_PI);
 }
 
-/*float CalcPenumbra(float4 lightSpacePosition, float noisePhi)
+float CalcPenumbra(
+	float4 lightSpacePosition,
+	float4x4 worldToLightMatrix,
+	float4x4 lightToLispMatrix,
+	float4x4 shadowMatrix,
+	float4 shadowClamp,
+	float noisePhi,
+	float sampleSize)
 {
-        for (int i = 0; i < SOFT_SHADOW_SAMPLES; i++)
-        {
-                float2 uv = lightSpacePosition.xy + SOFT_SHADOW_MAX_PENUMBRA * VogelDiskSample(i, phi);
+	float4x4 offsetToLightMatrix = float4x4(
+		sampleSize, 0,          0,          0,
+		0,          sampleSize, 0,          0,
+		0,          0,          sampleSize, 0,
+		lightSpacePosition);
+
+	float4x4 offsetToLispMatrix = mul(offsetToLightMatrix, lightToLispMatrix);
+	float4x4 lispToLightMatrix = mul(MatrixInverse(shadowMatrix), worldToLightMatrix);
+
+	float blockerDepth = 0.0;
+	float blockerCount = 0.0;
+
+        for (int i = 0; i < SOFT_SHADOW_SAMPLES; i += 4) {
+		float4x4 offsets = float4x4(
+			VogelDiskSample(i + 0, noisePhi), 0, 1,
+			VogelDiskSample(i + 1, noisePhi), 0, 1,
+			VogelDiskSample(i + 2, noisePhi), 0, 1,
+			VogelDiskSample(i + 3, noisePhi), 0, 1);
+
+		float4x4 offsetPositions = mul(offsets, offsetToLispMatrix);
+
+		// Clamp to cascade
+		offsetPositions._m00_m01_m10_m11 = clamp(offsetPositions._m00_m01_m10_m11, shadowClamp.xyxy, shadowClamp.zwzw);
+		offsetPositions._m20_m21_m30_m31 = clamp(offsetPositions._m20_m21_m30_m31, shadowClamp.xyxy, shadowClamp.zwzw);
+
+		float4 samples = float4(
+			GetShadowMapZ(offsetPositions[0]),
+			GetShadowMapZ(offsetPositions[1]),
+			GetShadowMapZ(offsetPositions[2]),
+			GetShadowMapZ(offsetPositions[3]));
+
+		offsetPositions._m02_m12_m22_m32 = samples * offsetPositions._m03_m13_m23_m33;
+		float4x4 lightSpacePositions = mul(offsetPositions, lispToLightMatrix);
+		float4 lightSpaceZ = lightSpacePositions._m02_m12_m22_m32;
+
+		float4 compare = lightSpaceZ < lightSpacePosition.z;
+		blockerDepth += dot(lightSpaceZ, compare);
+		blockerCount += dot(compare, 1.0);
         }
-}*/
+
+	if (blockerCount == 0.0)
+		return 0.0;
+
+	float avgBlockerDepth = blockerDepth / blockerCount;
+	float difference = (lightSpacePosition.z - avgBlockerDepth) / avgBlockerDepth;
+	return saturate(pow(difference, 2) * SOFT_SHADOW_PENUMBRA_FACTOR);
+	//return (lightSpacePosition.z - avgBlockerDepth) * 0.5;
+}
 
 float3 GetShadowRate(
 	float2 fragCoord,
 	float4 worldPosition,
-	float4 lispPosition,
 	float4x4 shadowMtx,
 	float4 shadowClamp,
 	float normalShadow,
 	float4 eyeVec = 0.0,
 	float penumbraBias = 0.0)
 {
-	/* 視点からの距離(eyeVec.wに距離が入っている) */
-	float dist = saturate((gFC_ShadowMapParam.y - eyeVec.w) * gFC_ShadowMapParam.z);
-	float noisePhi = NoisePhi(fragCoord.xy);
-	float penumbra = max(penumbraBias, SOFT_SHADOW_MIN_PENUMBRA);
-
 	float4x4 worldToLightMatrix = DirectionMatrix(gFC_ShadowLightDir.xyz);
 	float4x4 lightToLispMatrix = mul(MatrixTranspose(worldToLightMatrix), shadowMtx);
 	float4 lightSpacePosition = mul(worldPosition, worldToLightMatrix);
 
-	float4x4 offsetToLightMatrix = float4x4(
+	/* 視点からの距離(eyeVec.wに距離が入っている) */
+	float dist = saturate((gFC_ShadowMapParam.y - eyeVec.w) * gFC_ShadowMapParam.z);
+	float noisePhi = NoisePhi(fragCoord.xy);
+
+	/*float penumbra = max(CalcPenumbra(
+		lightSpacePosition,
+		worldToLightMatrix
+		lightToLispMatrix,
+		shadowMtx,
+		shadowClamp,
+		noisePhi,
+		penumbraBias) * penumbraBias, SOFT_SHADOW_MIN_PENUMBRA);*/
+
+	float penumbra = CalcPenumbra(
+		lightSpacePosition,
+		worldToLightMatrix,
+		lightToLispMatrix,
+		shadowMtx,
+		shadowClamp,
+		noisePhi,
+		0.2);
+
+	/*float4x4 offsetToLightMatrix = float4x4(
 		penumbra, 0,        0,        0,
 		0,        penumbra, 0,        0,
 		0,        0,        penumbra, 0,
@@ -100,21 +173,21 @@ float3 GetShadowRate(
 		offsetPositions._m20_m21_m30_m31 = clamp(offsetPositions._m20_m21_m30_m31, shadowClamp.xyxy, shadowClamp.zwzw);
 
 		float4 samples = float4(
-			__GetShadowRate(offsetPositions[0]),
-			__GetShadowRate(offsetPositions[1]),
-			__GetShadowRate(offsetPositions[2]),
-			__GetShadowRate(offsetPositions[3]));
+			GetShadowMapCompare(offsetPositions[0]),
+			GetShadowMapCompare(offsetPositions[1]),
+			GetShadowMapCompare(offsetPositions[2]),
+			GetShadowMapCompare(offsetPositions[3]));
 
 		shadow += dot(samples, dist * (1.0 / SOFT_SHADOW_SAMPLES));
 	}
 
-	return 1 - gFC_ShadowColor.xyz * saturate(shadow);
+	return 1.0 - gFC_ShadowColor.xyz * saturate(shadow);*/
+	return 1.0 - penumbra;
 }
 
 float3 CalcGetShadowRate(
 	float2 fragCoord,
 	float4 worldPosition,
-	float4 lispPosition,
 	float4x4 shadowMtx,
 	float4 shadowClamp,
 	float3 normal,
@@ -128,7 +201,6 @@ float3 CalcGetShadowRate(
 	float3 rate = GetShadowRate(
 		fragCoord,
 		worldPosition,
-		lispPosition,
 		shadowMtx,
 		shadowClamp,
 		fShadow,
@@ -149,7 +221,6 @@ float3 CalcGetShadowRateLitSpace(float2 fragCoord, float4 lispPosition, float3 n
 	return CalcGetShadowRate(
 		fragCoord,
 		worldPosition,
-		lispPosition,
 		gFC_ShadowMapMtxArray0,
 		shadowClamp,
 		normal,
@@ -190,7 +261,6 @@ float3 CalcGetShadowRateWorldSpace(float2 fragCoord, float4 worldspace_Pos, floa
 	return CalcGetShadowRate(
 		fragCoord,
 		worldPosition,
-		lispPosition,
 		shadowMtx,
 		shadowClamp,
 		normal,
@@ -211,7 +281,6 @@ float3 CalcGetShadowRateWorldSpaceNoCsd(float2 fragCoord, float4 worldspace_Pos,
 	return CalcGetShadowRate(
 		fragCoord,
 		worldPosition,
-		lispPosition,
 		gFC_ShadowMapMtxArray0,
 		shadowClamp,
 		normal,
