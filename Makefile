@@ -52,11 +52,9 @@ SOURCES := $(shell find $(SRC_DIR) $(COMMON_DIR) -type f 2> /dev/null)
 all: $(FLVER_ME2)
 
 .PHONY: test
-test: STEAM := "$(shell echo $(DSR) | grep -Poh '.*/Steam(?=/steamapps)')/steam.exe"
-test: APPID := 570940
 test: all
 	@echo "Launching Dark Souls Remastered"
-	@$(STEAM) -applaunch $(APPID)
+	@cd $(DSR)/ModEngine2 && ./launchmod_darksoulsremastered.bat
 
 $(FLVER_ME2): $(FLVER_DCX)
 	@cp "$<" "$@"
