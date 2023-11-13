@@ -147,7 +147,7 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 	float3 lightmapColor = 1.0f; // combined lightmap + shadow map
 	float3 shadowColor = 1.0f; // soft shadows only
 
-	//{//lightmap and shadowmap
+	{//lightmap and shadowmap
 	#ifdef WITH_LightMap
 		#ifdef WITH_MultiTexture
 			const float2 lightmapUV = In.TexLit.xy;
@@ -187,7 +187,7 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 			shadowColor = softShadowMapVal;
 		#endif
 	#endif
-	//}
+	}
 
 #if defined(WITH_MultiTexture) && defined(WITH_SpecularMap)
 	float4 pblTexData = tex2D(gSMP_PBLMap, difTexUV.xy).rgba;
@@ -284,9 +284,6 @@ GBUFFER_OUT FragmentMain(VTX_OUT In)
 
 #ifdef WITH_Glow
 	Mtl.LitColor.rgb = ReverseToneMap(Mtl.LitColor.rgb * gFC_ToneCorrectParams.x);
-#endif
-#ifdef WITH_ShadowMap
-	Mtl.LitColor.rgb = shadowMapVal;
 #endif
 	return PackGBuffer(Out, In, Mtl);
 }

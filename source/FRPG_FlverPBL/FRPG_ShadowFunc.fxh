@@ -23,11 +23,16 @@
 
 #define M_PI 3.1415926535897932384626433832795
 
-#define SOFT_SHADOW_SAMPLES 32
+#define SOFT_SHADOW_SAMPLES 64
 #define SOFT_SHADOW_MIN_PENUMBRA 0.03
-#define SOFT_SHADOW_MAX_PENUMBRA 0.2
-#define SOFT_SHADOW_AMBIENT_PENUMBRA 0.2
-#define SOFT_SHADOW_PENUMBRA_FACTOR 1.0
+#define SOFT_SHADOW_AMBIENT_PENUMBRA 0.5
+#define SOFT_SHADOW_PENUMBRA_CURVE_MIN 0.2
+#define SOFT_SHADOW_PENUMBRA_FACTOR (1.0 / 4.0)
+
+// Fade shadows out over large distances
+#define SHADOW_FADE_DISTANCE_MIN 8.0
+#define SHADOW_FADE_DISTANCE_MAX 16.0
+#define INV_SHADOW_FADE_RANGE (1.0 / (SHADOW_FADE_DISTANCE_MAX - SHADOW_FADE_DISTANCE_MIN))
 
 // FRPG_Commonに移動//#define gSMP_ShadowMap	gSMP_7	//シャドウマップ用サンプラ
 
@@ -56,7 +61,7 @@ float NoisePhi(float2 uv)
 	return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453) * (2 * M_PI);
 }
 
-float CalcPenumbra(
+float CalcLightBlockerDistance(
 	float4 lightSpacePosition,
 	float4x4 worldToLightMatrix,
 	float4x4 lightToLispMatrix,
@@ -109,9 +114,7 @@ float CalcPenumbra(
 		return 0.0;
 
 	float avgBlockerDepth = blockerDepth / blockerCount;
-	float difference = (lightSpacePosition.z - avgBlockerDepth) / avgBlockerDepth;
-	return saturate(pow(difference, 2) * SOFT_SHADOW_PENUMBRA_FACTOR);
-	//return (lightSpacePosition.z - avgBlockerDepth) * 0.5;
+	return lightSpacePosition.z - avgBlockerDepth;
 }
 
 float3 GetShadowRate(
@@ -127,29 +130,27 @@ float3 GetShadowRate(
 	float4x4 lightToLispMatrix = mul(MatrixTranspose(worldToLightMatrix), shadowMtx);
 	float4 lightSpacePosition = mul(worldPosition, worldToLightMatrix);
 
-	/* 視点からの距離(eyeVec.wに距離が入っている) */
-	float dist = saturate((gFC_ShadowMapParam.y - eyeVec.w) * gFC_ShadowMapParam.z);
 	float noisePhi = NoisePhi(fragCoord.xy);
 
-	/*float penumbra = max(CalcPenumbra(
-		lightSpacePosition,
-		worldToLightMatrix
-		lightToLispMatrix,
-		shadowMtx,
-		shadowClamp,
-		noisePhi,
-		penumbraBias) * penumbraBias, SOFT_SHADOW_MIN_PENUMBRA);*/
-
-	float penumbra = CalcPenumbra(
+	float blockerDistance = CalcLightBlockerDistance(
 		lightSpacePosition,
 		worldToLightMatrix,
 		lightToLispMatrix,
 		shadowMtx,
 		shadowClamp,
 		noisePhi,
-		0.2);
+		penumbraBias);
 
-	/*float4x4 offsetToLightMatrix = float4x4(
+	float penumbraFactor = saturate(pow(blockerDistance * SOFT_SHADOW_PENUMBRA_FACTOR, 2));
+	float penumbraFactorAdjusted = lerp(SOFT_SHADOW_PENUMBRA_CURVE_MIN, 1.0, penumbraFactor);
+	float penumbra = max(penumbraFactorAdjusted * penumbraBias, SOFT_SHADOW_MIN_PENUMBRA);
+
+	/* 視点からの距離(eyeVec.wに距離が入っている) */
+	float drawDistanceFade = saturate((gFC_ShadowMapParam.y - eyeVec.w) * gFC_ShadowMapParam.z);
+	float blockerDistanceFade = saturate(1.0 - (blockerDistance - SHADOW_FADE_DISTANCE_MIN) * INV_SHADOW_FADE_RANGE);
+	float distanceFade = sqrt(drawDistanceFade * blockerDistanceFade);
+
+	float4x4 offsetToLightMatrix = float4x4(
 		penumbra, 0,        0,        0,
 		0,        penumbra, 0,        0,
 		0,        0,        penumbra, 0,
@@ -178,11 +179,10 @@ float3 GetShadowRate(
 			GetShadowMapCompare(offsetPositions[2]),
 			GetShadowMapCompare(offsetPositions[3]));
 
-		shadow += dot(samples, dist * (1.0 / SOFT_SHADOW_SAMPLES));
+		shadow += dot(samples, distanceFade * (1.0 / SOFT_SHADOW_SAMPLES));
 	}
 
-	return 1.0 - gFC_ShadowColor.xyz * saturate(shadow);*/
-	return 1.0 - penumbra;
+	return 1.0 - gFC_ShadowColor.xyz * saturate(shadow);
 }
 
 float3 CalcGetShadowRate(
