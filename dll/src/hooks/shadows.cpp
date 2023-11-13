@@ -17,7 +17,8 @@ extern "C" void create_shadow_map_sampler(DLGR::DLResourceManager *resource_mana
 		.type = DLGR::DLSamplerType::min_mag_mip_linear,
 		.address_u = DLGR::DLTextureAddressMode::border,
 		.address_v = DLGR::DLTextureAddressMode::border,
-		.address_w = DLGR::DLTextureAddressMode::border
+		.address_w = DLGR::DLTextureAddressMode::border,
+		.border_color = {1.f, 1.f, 1.f, 1.f}
 	});
 }
 
