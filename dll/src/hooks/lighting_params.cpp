@@ -1,5 +1,13 @@
 #include "util/memory.h"
 
+// lerp factor between lightmap mask and 1.0
+extern "C" float point_light_attenuation[] = {
+	0.6f, // LocalPlayerLantern
+	1.0f, // Sfx
+	1.0f, // DynamicMap
+	0.0f, // FixedMap
+};
+
 float *hook_WhackAssLightScaling(float *out, short *in, float alpha)
 {
 	// The original treats input alpha as a percentage over 100 and
@@ -15,6 +23,7 @@ float *hook_WhackAssLightScaling(float *out, short *in, float alpha)
 extern "C" void hook_copy_shader_params1();
 extern "C" void hook_copy_shader_params2();
 extern "C" void hook_copy_shader_params3();
+extern "C" void hook_point_light_attenuation();
 
 void apply_hooks_lighting_params()
 {
@@ -54,4 +63,12 @@ void apply_hooks_lighting_params()
 		"xxxxxxxxxxxxxx");
 
 	apply_jmp_hook(target_light_scaling, hook_WhackAssLightScaling);
+
+	auto *target_point_light_attenuation = sigscan(
+		// call [rax+0x60]
+		// movzx eax, byte ptr [rdi+0x18]
+		"\xFF\x50\x60\x0F\xB6\x47\x18",
+		"xxxxxxx") + 3;
+
+	apply_call_hook(target_point_light_attenuation, hook_point_light_attenuation, 27);
 }

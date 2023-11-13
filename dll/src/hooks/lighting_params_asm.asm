@@ -44,6 +44,20 @@ hook_copy_shader_params3 PROC
         jmp     copy_dir_lights
 hook_copy_shader_params3 ENDP
 
+EXTERN point_light_attenuation: REAL4
+
+PUBLIC hook_point_light_attenuation
+hook_point_light_attenuation PROC
+        ; Overwritten instructions
+        movzx   eax, byte ptr [rdi+18h] ; light type
+        xorps   xmm10, xmm10
+
+        ; Get point light attenuation by type from array
+        lea     rcx, point_light_attenuation
+        movss   xmm11, dword ptr [rcx+rax*4]
+        ret
+hook_point_light_attenuation ENDP
+
 _TEXT ENDS
 
 END

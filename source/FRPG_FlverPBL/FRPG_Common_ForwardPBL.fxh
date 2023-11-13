@@ -45,7 +45,6 @@
 #define AMBIENT_CUBEMAP_STRENGTH 0.5f
 #define AMBIENT_SPECULAR_MULTIPLIER 0.4f
 #define AMBIENT_SHADOW_STRENGTH 0.5f
-#define PLAYER_LIGHT_SHADOW_STRENGTH 0.4f
 
 struct s_numLights {
 	uint offsetNum;
@@ -490,10 +489,6 @@ float3 CalcPointLightsClustered(MATERIAL Mtl, float3 vertexNormal, float3 V, flo
 		float3 L = lightPosition.xyz - worldPos;
 		float distL = length(L);
 		if (distL < lightColor.w) {
-			if (lightID == 0) {
-				// Player light
-				attenuation = 1.0f - PLAYER_LIGHT_SHADOW_STRENGTH;
-			}
 			float3 lightmapFactor = lerp(lightmapShadow, 1, attenuation);
 			L /= distL;
 			pointLightComponent += PointLightContribution(Mtl.Normal, vertexNormal, L, V,
