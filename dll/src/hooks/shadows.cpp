@@ -38,6 +38,15 @@ extern "C" void hook_add_shadow_map_sampler();
 
 void apply_hooks_shadows()
 {
+	auto *g_ShadowMapSize = (int*)read_rel32(sigscan(
+		// movaps [rdi+0x10], xmm0
+		// movaps xmm3, xmm4
+		"\x0F\x29\x47\x10\x0F\x28\xDC",
+		"xxxxxxx") - 0x10);
+
+	// Increase shadow map resolution
+	*g_ShadowMapSize = 4096;
+
 	auto *target_vertex_lisp_asm_model = sigscan(
 		// jz +0xB1
 		// movaps xmm0, [rsi+0x60]
