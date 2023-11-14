@@ -1,4 +1,5 @@
 #include "util/memory.h"
+#include "util/vector.h"
 
 // lerp factor between lightmap mask and 1.0
 extern "C" float point_light_attenuation[] = {
@@ -8,15 +9,14 @@ extern "C" float point_light_attenuation[] = {
 	0.0f, // FixedMap
 };
 
-float *hook_WhackAssLightScaling(float *out, short *in, float alpha)
+color_rgba_f32 *hook_LightColorScaling(color_rgba_f32 *out, const color_rgba_s16 &in, float alpha)
 {
 	// The original treats input alpha as a percentage over 100 and
 	// converts from srgb space despite light colors being linear
-	float multiplier = (float)in[3] / 255.0f;
-	out[0] = (float)in[0] / 255.0f * multiplier;
-	out[1] = (float)in[1] / 255.0f * multiplier;
-	out[2] = (float)in[2] / 255.0f * multiplier;
-	out[3] = alpha;
+	out->r = (float)(in.r * in.a) * (1.0f / (255.0f * 255.0f));
+	out->g = (float)(in.g * in.a) * (1.0f / (255.0f * 255.0f));
+	out->b = (float)(in.b * in.a) * (1.0f / (255.0f * 255.0f));
+	out->a = alpha;
 	return out;
 }
 
@@ -54,7 +54,7 @@ void apply_hooks_lighting_params()
 
 	apply_call_hook(target3, hook_copy_shader_params3, 14);
 
-	auto *target_light_scaling = sigscan(
+	auto *target_LightColorScaling = sigscan(
 		// mov [rsp+8], rbx
 		// push rdi
 		// sub rsp, 0x40
@@ -62,7 +62,7 @@ void apply_hooks_lighting_params()
 		"\x48\x89\x5C\x24\x08\x57\x48\x83\xEC\x40\x0F\xBF\x42\x06",
 		"xxxxxxxxxxxxxx");
 
-	apply_jmp_hook(target_light_scaling, hook_WhackAssLightScaling);
+	apply_jmp_hook(target_LightColorScaling, hook_LightColorScaling);
 
 	auto *target_point_light_attenuation = sigscan(
 		// call [rax+0x60]
