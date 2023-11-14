@@ -333,17 +333,6 @@ float3 CalcDiffuseLD(float3 dominantN)
 #endif
 }
 
-float3 CalcDiffuseLD()
-{
-#ifdef WITH_EnvLerp
-	float3 dif1 = gFC_EnvDifMapMulCol.rgb;
-	float3 dif2 = gFC_EnvDifMapMulCol2.rgb;
-	return lerp(dif1, dif2, gFC_EnvDifMapMulCol2.a);
-#else
-	return gFC_EnvDifMapMulCol.rgb;
-#endif
-}
-
 float3 CalcSpecularLD(float3 dominantR, float roughness)
 {
 	float mipLevel = linearRoughnessToMipLevel(roughness, gFC_LightProbeMipCount);
@@ -542,7 +531,7 @@ float3 CalcEnvDirLight(MATERIAL Mtl, float4 lightVec, float4 lightCol, float3 ve
 	const float horizonFade = CalcSpecularHorizonFade(vertexNormal, lightDirection);
 	const float3 dominantR = getSpecularDominantDir_forLightProbe(Mtl.Normal, reflection, Mtl.Roughness);
 	const float3 specMult = CalcSpecularLD(dominantR, Mtl.Roughness) * horizonFade * ENV_SPECULAR_MULTIPLIER;
-	const float3 diffMult = CalcDiffuseLD() * ambientAdjust * ENV_DIFFUSE_MULTIPLIER;
+	const float3 diffMult = ambientAdjust * ENV_DIFFUSE_MULTIPLIER;
 
 	const float3 diffContrib = Mtl.DiffuseColor * M_INV_PI * diffMult * lightmapColor;
 	const float3 specContrib = microfacets_brdf(Mtl.Normal, lightDirection, vecEye, Mtl.SpecularColor, specularF90, Mtl.Roughness) * specMult;
