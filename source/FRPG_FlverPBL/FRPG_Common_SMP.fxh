@@ -123,7 +123,6 @@
 #define gSMP_AOMap			gSMP_8	//QLOC: Ambient Occlusion map
 #define gSMP_PBLMap			gSMP_1	//QLOC: reuse specular as PBL data
 #define gSMP_PBLMap2		gSMP_4	//QLOC: reuse specular as PBL data
-#define gSMP_DFG			gSMP_9			//qloc: DFG texture
 #define gSMP_Subsurf		gSMP_10	//QLOC: subsurface scattering parameters
 #define gSMP_Height			gSMP_10	//QLOC: heightmap (reused subsurface scattering map)
 //2010/08/30 nacheon ゴーストテクスチャスクロール削除 #define gSMP_GhostMap		gSMP_9	//ゴーストマップ用サンプラ
@@ -151,7 +150,7 @@
 #define gSMP_EnvMapSampler		gSMP_12_CUBESampler	//環境マップ用サンプラ
 #define gSMP_AOMapSampler		gSMP_8Sampler	//QLOC: Ambient Occlusion map
 #define gSMP_PBLMapSampler		gSMP_1Sampler	//QLOC: reuse specular as PBL data
-#define gSMP_DFGMapSampler		gSMP_9Sampler	//qloc: DFG texture
+#define gSMP_ShadowMapReadSampler	gSMP_9Sampler	//non-comparison shadow map sampler
 #define gSMP_SubsurfMapSampler	gSMP_10Sampler	//QLOC: subsurface scattering parameters
 //2010/08/30 nacheon ゴーストテクスチャスクロール削除 #define gSMP_GhostMap		gSMP_9	//ゴーストマップ用サンプラ
 //2010/08/30 nacheon ゴーストテクスチャスクロール削除 #define gSMP_GhostMap2		gSMP_10	//ゴーストマップ用サンプラ

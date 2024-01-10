@@ -13,6 +13,14 @@ void apply_jmp_hook(void *target, const void *hook);
 
 void apply_call_hook(void *target, const void *hook, size_t pad_size);
 
+void patch_code(void *target, const void *patch, size_t size);
+
+template<size_t N>
+void patch_code(void *target, const char (&patch)[N])
+{
+	patch_code(target, patch, N - 1);
+}
+
 inline std::byte *sigscan(
 	const char *name, const char *sig, const char *mask,
 	const std::source_location &location = std::source_location::current())
@@ -29,4 +37,20 @@ inline std::byte *sigscan(
 	const std::source_location &location = std::source_location::current())
 {
 	return sigscan(nullptr, sig, mask, location);
+}
+
+inline const std::byte *read_rel32(
+	const void *rel32, const std::source_location &location = std::source_location::current())
+{
+	auto *result = (const std::byte*)rel32 + *(int32_t*)rel32 + 4;
+	logger.println(
+		"{}:{}: rel32 result: {:016X}",
+		base_file_name(location), location.line(), (uintptr_t)result);
+	return result;
+}
+
+inline std::byte *read_rel32(
+	void *rel32, const std::source_location &location = std::source_location::current())
+{
+	return (std::byte*)read_rel32((const void*)rel32, location);
 }

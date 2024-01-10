@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <tuple>
+#include <utility>
 #include <Windows.h>
 #include <Psapi.h>
 
@@ -53,7 +54,7 @@ void apply_jmp_hook(void *target, const void *hook)
 void apply_call_hook(void *target, const void *hook, size_t pad_size)
 {
 	constexpr size_t patch_size = 12;
-	const auto total_size = max(patch_size, pad_size);
+	const auto total_size = std::max(patch_size, pad_size);
 
 	DWORD old_protect;
 	VirtualProtect(target, total_size, PAGE_EXECUTE_READWRITE, &old_protect);
@@ -67,4 +68,12 @@ void apply_call_hook(void *target, const void *hook, size_t pad_size)
 	memset((std::byte*)target + patch_size, 0x90, total_size - patch_size);
 
 	VirtualProtect(target, total_size, old_protect, &old_protect);
+}
+
+void patch_code(void *target, const void *patch, size_t size)
+{
+	DWORD old_protect;
+	VirtualProtect(target, size, PAGE_EXECUTE_READWRITE, &old_protect);
+	memcpy(target, patch, size);
+	VirtualProtect(target, size, old_protect, &old_protect);
 }

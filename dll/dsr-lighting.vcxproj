@@ -109,7 +109,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
@@ -124,7 +124,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
@@ -137,11 +137,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <MASM Include="src\hooks\deferred_asm.asm" />
+    <MASM Include="src\hooks\shadows_asm.asm" />
     <MASM Include="src\main_asm.asm">
       <FileType>Document</FileType>
     </MASM>
     <ClCompile Include="src\hooks\deferred.cpp" />
     <ClCompile Include="src\hooks\lighting_params.cpp" />
+    <ClCompile Include="src\hooks\shadows.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\util\memory.cpp" />
   </ItemGroup>
@@ -149,7 +151,16 @@
     <MASM Include="src\hooks\lighting_params_asm.asm" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Dantelion2\DLDrawContext.h" />
+    <ClInclude Include="src\Dantelion2\DLGfxReferenceCountObject.h" />
+    <ClInclude Include="src\Dantelion2\DLGPUResource.h" />
+    <ClInclude Include="src\Dantelion2\DLReferenceCountObject.h" />
+    <ClInclude Include="src\Dantelion2\DLResourceManager.h" />
+    <ClInclude Include="src\Dantelion2\DLSamplerState11.h" />
+    <ClInclude Include="src\Dantelion2\HeapAllocator.h" />
     <ClInclude Include="src\Dantelion2\HGCommandBuffer.h" />
+    <ClInclude Include="src\Dantelion2\HGDrawContext.h" />
+    <ClInclude Include="src\FRPG\FrpgDrawContext.h" />
     <ClInclude Include="src\FRPG\FrpgEntityFactory.h" />
     <ClInclude Include="src\FRPG\FrpgRenderTextureEntity.h" />
     <ClInclude Include="src\FRPG\FrpgUtil.h" />

@@ -246,7 +246,7 @@ struct vec3_base {
 	}
 };
 
-using vec3  = vec_impl<vec3_base<float>>;
+using vec3 = vec_impl<vec3_base<float>>;
 
 template<typename T>
 struct vec4_base {
@@ -255,42 +255,35 @@ struct vec4_base {
 	constexpr auto elems() const { return std::make_tuple(x, y, z, w); }
 };
 
-using vec4  = vec_impl<vec4_base<float>>;
+using vec4 = vec_impl<vec4_base<float>>;
 
-template<typename T>
-struct color_util {
-	static constexpr auto max_value =
-		std::is_floating_point_v<T> ? T{1} : std::numeric_limits<T>::max();
-};
-
-template<typename T>
-struct color_rgb_base : color_util<T> {
-	using color_util<T>::max_value;
-
-	static constexpr vec_impl<color_rgb_base> white =
-		{ max_value, max_value, max_value };
+template<typename T, T MaxValue>
+struct color_rgb_base {
+	static constexpr auto hex(uint32_t value)
+	{
+		const auto r = (T)(((value >> 16) & 0xFF) * MaxValue / 255);
+		const auto g = (T)(((value >>  8) & 0xFF) * MaxValue / 255);
+		const auto b = (T)(((value >>  0) & 0xFF) * MaxValue / 255);
+		return vec_impl<color_rgb_base>(r, g, b);
+	}
 
 	T r, g, b;
 	constexpr auto elems()       { return std::tie(r, g, b); }
 	constexpr auto elems() const { return std::make_tuple(r, g, b); }
 };
 
-using color_rgb     = vec_impl<color_rgb_base<uint8_t>>;
-using color_rgb_f32 = vec_impl<color_rgb_base<float>>;
+using color_rgb_u8  = vec_impl<color_rgb_base<uint8_t, 255>>;
+using color_rgb_s16 = vec_impl<color_rgb_base<int16_t, 255>>;
+using color_rgb_f32 = vec_impl<color_rgb_base<float, 1.0f>>;
 
-template<typename T>
-struct color_rgba_base : color_util<T> {
-	using color_util<T>::max_value;
-
-	static constexpr vec_impl<color_rgba_base> white =
-		{ max_value, max_value, max_value, max_value };
-
+template<typename T, T MaxValue>
+struct color_rgba_base {
 	static constexpr auto hex(uint32_t value)
 	{
-		const auto r = (T)((value >> 24) & 0xFF) * (max_value / 255);
-		const auto g = (T)((value >> 16) & 0xFF) * (max_value / 255);
-		const auto b = (T)((value >>  8) & 0xFF) * (max_value / 255);
-		const auto a = (T)((value >>  0) & 0xFF) * (max_value / 255);
+		const auto r = (T)(((value >> 24) & 0xFF) * MaxValue / 255);
+		const auto g = (T)(((value >> 16) & 0xFF) * MaxValue / 255);
+		const auto b = (T)(((value >>  8) & 0xFF) * MaxValue / 255);
+		const auto a = (T)(((value >>  0) & 0xFF) * MaxValue / 255);
 		return vec_impl<color_rgba_base>(r, g, b, a);
 	}
 
@@ -299,8 +292,9 @@ struct color_rgba_base : color_util<T> {
 	constexpr auto elems() const { return std::make_tuple(r, g, b, a); }
 };
 
-using color_rgba     = vec_impl<color_rgba_base<uint8_t>>;
-using color_rgba_f32 = vec_impl<color_rgba_base<float>>;
+using color_rgba_u8  = vec_impl<color_rgba_base<uint8_t, 255>>;
+using color_rgba_s16 = vec_impl<color_rgba_base<int16_t, 255>>;
+using color_rgba_f32 = vec_impl<color_rgba_base<float, 1.0f>>;
 
 struct uv_coord_base {
 	float u, v;

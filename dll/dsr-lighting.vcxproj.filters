@@ -27,6 +27,9 @@
     <ClCompile Include="src\hooks\deferred.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\hooks\shadows.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="src\hooks\lighting_params_asm.asm">
@@ -36,6 +39,9 @@
       <Filter>Source Files</Filter>
     </MASM>
     <MASM Include="src\hooks\deferred_asm.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+    <MASM Include="src\hooks\shadows_asm.asm">
       <Filter>Source Files</Filter>
     </MASM>
   </ItemGroup>
@@ -77,6 +83,33 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Dantelion2\HGCommandBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Dantelion2\DLResourceManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Dantelion2\HeapAllocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Dantelion2\DLReferenceCountObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Dantelion2\DLGfxReferenceCountObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Dantelion2\DLGPUResource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Dantelion2\DLSamplerState11.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Dantelion2\DLDrawContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Dantelion2\HGDrawContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\FRPG\FrpgDrawContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

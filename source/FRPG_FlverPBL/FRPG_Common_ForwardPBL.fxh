@@ -25,8 +25,6 @@
 #define LAMP_FALLOFF_PERCEIVED_LINEAR 3
 #define LAMP_FALLOFF_FIXED_LINEAR 4
 
-#define DFG_TEXTURE_SIZE 128.0f
-
 #define gFC_DifMapMultiplier gFC_LightProbeParam.x
 #define gFC_SpcMapMultiplier gFC_LightProbeParam.x
 #define gFC_LightProbeMipCount gFC_LightProbeParam.w
@@ -38,16 +36,15 @@
 #define CLUSTER_COUNT_Y 8
 #define CLUSTER_COUNT_Z 24
 
-#define AMBIENT_FRONT_MULTIPLIER (2.0f/3.0f)
-#define AMBIENT_BACK_MULTIPLIER (1.0f/3.0f)
+#define AMBIENT_FRONT_MULTIPLIER (4.0/9.0)
+#define AMBIENT_BACK_MULTIPLIER (2.0/9.0)
 #define AMBIENT_AVG_MULTIPLIER ((AMBIENT_FRONT_MULTIPLIER+AMBIENT_BACK_MULTIPLIER)*0.5f)
 #define ENV_SPECULAR_MULTIPLIER 0.4f
-#define ENV_DIFFUSE_MULTIPLIER 1.1f
+#define ENV_DIFFUSE_MULTIPLIER 1.25f
 #define CUBEMAP_POWER 1.75f
 #define AMBIENT_CUBEMAP_STRENGTH 0.5f
 #define AMBIENT_SPECULAR_MULTIPLIER 0.4f
 #define AMBIENT_SHADOW_STRENGTH 0.5f
-#define PLAYER_LIGHT_SHADOW_STRENGTH 0.25f
 
 struct s_numLights {
 	uint offsetNum;
@@ -291,17 +288,6 @@ float3 getDiffuseDominantDir_forLightProbe(float3 N, float3 V, float NdotV, floa
 	return lerp(N, V, lerpFactor);
 }
 
-float CalcDiffuseFresnel(float NdotV, float roughness)
-{
-	return 0.04f;
-	return tex2Dlod(gSMP_DFG, float4(roughness, NdotV, 0, 0)).z;
-}
-
-float2 CalcSpecularDFG(float NdotV, float roughness)
-{
-	return tex2Dlod(gSMP_DFG, float4(roughness, NdotV, 0, 0)).xy;
-}
-
 static const float c1 = 0.429043;
 static const float c2 = 0.511664;
 static const float c3 = 0.743125;
@@ -347,17 +333,6 @@ float3 CalcDiffuseLD(float3 dominantN)
 #endif
 }
 
-float3 CalcDiffuseLD()
-{
-#ifdef WITH_EnvLerp
-	float3 dif1 = gFC_EnvDifMapMulCol.rgb;
-	float3 dif2 = gFC_EnvDifMapMulCol2.rgb;
-	return lerp(dif1, dif2, gFC_EnvDifMapMulCol2.a);
-#else
-	return gFC_EnvDifMapMulCol.rgb;
-#endif
-}
-
 float3 CalcSpecularLD(float3 dominantR, float roughness)
 {
 	float mipLevel = linearRoughnessToMipLevel(roughness, gFC_LightProbeMipCount);
@@ -394,31 +369,6 @@ float3 evaluateIBLDiffuse(float3 N, float3 V, float NdotV, float roughness)
 	float3 diffuseLighting = CalcDiffuseLD(N);
 
 	return diffuseLighting;
-}
-
-float3 evaluateIBLSpecular(float3 N, float3 R, float3 vertexNormal, float NdotV, float roughness, float3 f0, float3 f90)
-{
-	float3 dominantR = getSpecularDominantDir_forLightProbe(N, R, roughness);
-
-	// Rebuild the function
-	// L . D. ( f0.Gv.(1-Fc) + Gv.Fc ) . cosTheta / (4 . NdotL . NdotV)
-	float3 preLD = CalcSpecularLD(dominantR, roughness);
-
-	// Horizon fading trick from http://marmosetco.tumblr.com/post/81245981087
-	float ndl = dot(vertexNormal, R);
-	const float horizonFade = 1.3;
-	float horiz = clamp(1.0 + horizonFade * ndl, 0.0, 1.0);
-	horiz *= horiz;
-	preLD *= horiz;
-
-	// Sample pre-integrate DFG
-	// Fc = (1-H.L)^5
-	// PreIntegratedDFG.r = Gv.(1-Fc)
-	// PreIntegratedDFG.g = Gv.Fc
-	float2 preDFG = CalcSpecularDFG(NdotV, roughness);
-
-	// LD . ( f0.Gv.(1-Fc) + Gv.Fc.f90 )
-	return preLD * (f0 * preDFG.x + f90 * preDFG.y);
 }
 
 // thicknessSqrt is sqrt(mesh thickness)
@@ -528,10 +478,6 @@ float3 CalcPointLightsClustered(MATERIAL Mtl, float3 vertexNormal, float3 V, flo
 		float3 L = lightPosition.xyz - worldPos;
 		float distL = length(L);
 		if (distL < lightColor.w) {
-			if (lightID == 0) {
-				// Player light
-				attenuation = 1.0f - PLAYER_LIGHT_SHADOW_STRENGTH;
-			}
 			float3 lightmapFactor = lerp(lightmapShadow, 1, attenuation);
 			L /= distL;
 			pointLightComponent += PointLightContribution(Mtl.Normal, vertexNormal, L, V,
@@ -585,7 +531,7 @@ float3 CalcEnvDirLight(MATERIAL Mtl, float4 lightVec, float4 lightCol, float3 ve
 	const float horizonFade = CalcSpecularHorizonFade(vertexNormal, lightDirection);
 	const float3 dominantR = getSpecularDominantDir_forLightProbe(Mtl.Normal, reflection, Mtl.Roughness);
 	const float3 specMult = CalcSpecularLD(dominantR, Mtl.Roughness) * horizonFade * ENV_SPECULAR_MULTIPLIER;
-	const float3 diffMult = CalcDiffuseLD() * ambientAdjust * ENV_DIFFUSE_MULTIPLIER;
+	const float3 diffMult = ambientAdjust * ENV_DIFFUSE_MULTIPLIER;
 
 	const float3 diffContrib = Mtl.DiffuseColor * M_INV_PI * diffMult * lightmapColor;
 	const float3 specContrib = microfacets_brdf(Mtl.Normal, lightDirection, vecEye, Mtl.SpecularColor, specularF90, Mtl.Roughness) * specMult;
